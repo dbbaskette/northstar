@@ -65,6 +65,7 @@ func main() {
 	activityRepo := repository.NewActivityRepo(pool)
 	checklistRepo := repository.NewChecklistRepo(pool)
 	attachmentRepo := repository.NewAttachmentRepo(pool)
+	searchRepo := repository.NewSearchRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -90,6 +91,7 @@ func main() {
 	checklistHandler := handler.NewChecklistHandler(checklistRepo, cardRepo, listRepo, events)
 	attachmentHandler := handler.NewAttachmentHandler(attachmentRepo, cardRepo, listRepo, store, events)
 	archiveHandler := handler.NewArchiveHandler(cardRepo, listRepo, events)
+	searchHandler := handler.NewSearchHandler(searchRepo)
 
 	r := chi.NewRouter()
 
@@ -120,6 +122,7 @@ func main() {
 			r.Use(middleware.Auth(authService))
 
 			r.Get("/auth/me", authHandler.Me)
+			r.Get("/search", searchHandler.Search)
 
 			r.Route("/teams", func(r chi.Router) {
 				r.Post("/", teamHandler.Create)
