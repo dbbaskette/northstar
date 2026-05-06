@@ -20,10 +20,23 @@ type CardHandler struct {
 	listRepo *repository.ListRepo
 	events   *service.Events
 	mentions *service.Mentions
+	copier   *service.CardCopier
 }
 
-func NewCardHandler(cardRepo *repository.CardRepo, listRepo *repository.ListRepo, events *service.Events, mentions *service.Mentions) *CardHandler {
-	return &CardHandler{cardRepo: cardRepo, listRepo: listRepo, events: events, mentions: mentions}
+func NewCardHandler(
+	cardRepo *repository.CardRepo,
+	listRepo *repository.ListRepo,
+	events *service.Events,
+	mentions *service.Mentions,
+	copier *service.CardCopier,
+) *CardHandler {
+	return &CardHandler{
+		cardRepo: cardRepo,
+		listRepo: listRepo,
+		events:   events,
+		mentions: mentions,
+		copier:   copier,
+	}
 }
 
 type createCardRequest struct {
@@ -51,6 +64,24 @@ type setCoverRequest struct {
 	AttachmentID *string `json:"attachment_id"`
 	Color        *string `json:"color"`
 	Size         *string `json:"size"`
+}
+
+type copyCardRequest struct {
+	TargetListID string `json:"target_list_id"`
+	Include      struct {
+		Description bool `json:"description"`
+		Checklists  bool `json:"checklists"`
+		Attachments bool `json:"attachments"`
+		Comments    bool `json:"comments"`
+		Labels      bool `json:"labels"`
+		Assignees   bool `json:"assignees"`
+		DueDate     bool `json:"due_date"`
+		Priority    bool `json:"priority"`
+	} `json:"include"`
+}
+
+type moveToListRequest struct {
+	TargetListID string `json:"target_list_id"`
 }
 
 func (h *CardHandler) boardIDForList(ctx context.Context, listID string) string {
@@ -224,6 +255,82 @@ func (h *CardHandler) Move(w http.ResponseWriter, r *http.Request) {
 			"card_id":     cardID,
 			"to_list_id":  req.ListID,
 			"position":    req.Position,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "moved"})
+}
+
+func (h *CardHandler) Copy(w http.ResponseWriter, r *http.Request) {
+	cardID := chi.URLParam(r, "cardId")
+	userID := middleware.GetUserID(r.Context())
+
+	var req copyCardRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.TargetListID == "" {
+		writeError(w, http.StatusBadRequest, "target_list_id is required")
+		return
+	}
+
+	newID, err := h.copier.Copy(r.Context(), cardID, req.TargetListID, userID, service.CopyOptions{
+		IncludeDescription: req.Include.Description,
+		IncludeChecklists:  req.Include.Checklists,
+		IncludeAttachments: req.Include.Attachments,
+		IncludeComments:    req.Include.Comments,
+		IncludeLabels:      req.Include.Labels,
+		IncludeAssignees:   req.Include.Assignees,
+		IncludeDueDate:     req.Include.DueDate,
+		IncludePriority:    req.Include.Priority,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if boardID := h.boardIDForList(r.Context(), req.TargetListID); boardID != "" {
+		h.events.Emit(r.Context(), boardID, userID, "card.copied", "card", newID, map[string]interface{}{
+			"card_id":        newID,
+			"source_card_id": cardID,
+			"list_id":        req.TargetListID,
+		})
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]string{"card_id": newID})
+}
+
+func (h *CardHandler) MoveToList(w http.ResponseWriter, r *http.Request) {
+	cardID := chi.URLParam(r, "cardId")
+	userID := middleware.GetUserID(r.Context())
+
+	var req moveToListRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.TargetListID == "" {
+		writeError(w, http.StatusBadRequest, "target_list_id is required")
+		return
+	}
+
+	pos, err := h.cardRepo.NextPositionInList(r.Context(), req.TargetListID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := h.cardRepo.Move(r.Context(), cardID, req.TargetListID, pos); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if boardID := h.boardIDForList(r.Context(), req.TargetListID); boardID != "" {
+		h.events.Emit(r.Context(), boardID, userID, "card.moved", "card", cardID, map[string]interface{}{
+			"card_id":    cardID,
+			"to_list_id": req.TargetListID,
+			"position":   pos,
 		})
 	}
 

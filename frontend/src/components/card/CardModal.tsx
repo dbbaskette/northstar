@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Copy,
+  Move,
 } from 'lucide-react'
 import {
   useCard,
@@ -25,6 +27,7 @@ import { useCreateLabel } from '@/api/labels'
 import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
 import CardCoverPicker from './CardCoverPicker'
+import CardCopyMoveModal from './CardCopyMoveModal'
 import Markdown from '../ui/Markdown'
 import Avatar from '../ui/Avatar'
 import {
@@ -65,6 +68,7 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
   const [editingDesc, setEditingDesc] = useState(false)
   const [comment, setComment] = useState('')
   const [showLabelPicker, setShowLabelPicker] = useState(false)
+  const [copyMoveMode, setCopyMoveMode] = useState<'copy' | 'move' | null>(null)
   const [newLabelName, setNewLabelName] = useState('')
   const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0]!)
 
@@ -519,11 +523,25 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
               </div>
             </div>
 
-            {/* Danger zone */}
-            <div className="border-t border-gray-200 pt-4">
+            {/* Actions */}
+            <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+              <button
+                onClick={() => setCopyMoveMode('copy')}
+                className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                <Copy className="h-4 w-4" />
+                Copy
+              </button>
+              <button
+                onClick={() => setCopyMoveMode('move')}
+                className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                <Move className="h-4 w-4" />
+                Move
+              </button>
               <button
                 onClick={handleDelete}
-                className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
+                className="ml-auto flex items-center gap-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete card
@@ -532,6 +550,20 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
           </div>
         ) : null}
       </div>
+
+      {copyMoveMode && (
+        <CardCopyMoveModal
+          open={true}
+          mode={copyMoveMode}
+          cardId={cardId}
+          currentBoardId={board.id}
+          onClose={() => {
+            setCopyMoveMode(null)
+            // For 'move', the card is now elsewhere — close the parent modal too
+            if (copyMoveMode === 'move') onClose()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -220,6 +220,21 @@ func (r *CardRepo) ListArchivedByBoard(ctx context.Context, boardID string) ([]m
 	return out, rows.Err()
 }
 
+// NextPositionInList returns the next slot at the bottom of the given list,
+// computed as MAX(position) + 1024 (or 1024 if the list is empty).
+func (r *CardRepo) NextPositionInList(ctx context.Context, listID string) (float64, error) {
+	var maxPos *float64
+	if err := r.pool.QueryRow(ctx,
+		`SELECT MAX(position) FROM cards WHERE list_id = $1 AND deleted_at IS NULL AND is_archived = FALSE`,
+		listID).Scan(&maxPos); err != nil {
+		return 0, err
+	}
+	if maxPos == nil {
+		return 1024, nil
+	}
+	return *maxPos + 1024, nil
+}
+
 func (r *CardRepo) Move(ctx context.Context, id, listID string, position float64) error {
 	const q = `
 		UPDATE cards SET list_id = $2, position = $3

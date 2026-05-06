@@ -81,13 +81,14 @@ func main() {
 
 	events := service.NewEvents(activityRepo, notifRepo, hub)
 	mentions := service.NewMentions(pool)
+	cardCopier := service.NewCardCopier(pool)
 	authService := service.NewAuthService(userRepo, pool, cfg.JWTSecret)
 
 	authHandler := handler.NewAuthHandler(authService)
 	teamHandler := handler.NewTeamHandler(teamRepo)
 	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo)
 	listHandler := handler.NewListHandler(listRepo, events)
-	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events, mentions)
+	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events, mentions, cardCopier)
 	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events, mentions)
 	labelHandler := handler.NewLabelHandler(labelRepo, cardRepo, listRepo, events)
 	activityHandler := handler.NewActivityHandler(activityRepo)
@@ -206,6 +207,8 @@ func main() {
 				r.Patch("/move", cardHandler.Move)
 				r.Patch("/reorder", cardHandler.Reorder)
 				r.Patch("/cover", cardHandler.SetCover)
+				r.Post("/copy", cardHandler.Copy)
+				r.Post("/move-to", cardHandler.MoveToList)
 
 				r.Post("/labels", labelHandler.AttachToCard)
 				r.Delete("/labels/{labelId}", labelHandler.DetachFromCard)
