@@ -33,6 +33,7 @@ import CardCopyMoveModal from './CardCopyMoveModal'
 import CardCustomFields from './CardCustomFields'
 import Markdown from '../ui/Markdown'
 import Avatar from '../ui/Avatar'
+import WatchToggle from '../ui/WatchToggle'
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -242,9 +243,12 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
               )}
             </div>
           </div>
-          <button onClick={onClose} className="ml-4 rounded-lg p-1 text-gray-400 hover:bg-gray-100">
-            <X className="h-5 w-5" />
-          </button>
+          <div className="ml-4 flex items-center gap-2">
+            <WatchToggle targetType="card" targetID={cardId} label />
+            <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {isLoading ? (

@@ -81,12 +81,16 @@ func (h *CommentHandler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 			h.events.Emit(r.Context(), boardID, userID, "comment.added", "comment", uuidStr(comment.ID), payload)
 
-			// Notify all card assignees about the new comment
+			// Notify card assignees + watchers about the new comment
 			recipients := make([]string, 0, len(card.Assignees))
 			for _, a := range card.Assignees {
 				recipients = append(recipients, uuidStr(a.ID))
 			}
 			h.events.Notify(r.Context(), recipients, userID, "comment.added", cardID, boardID, payload)
+			h.events.NotifyCardWatchers(r.Context(), cardID, boardID, userID, "comment.added", payload)
+
+			// Auto-watch the card when commenting
+			h.events.AutoWatchCard(r.Context(), userID, cardID)
 
 			// Notify mentioned users (regardless of assignment)
 			if h.mentions != nil {

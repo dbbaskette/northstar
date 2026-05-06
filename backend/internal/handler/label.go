@@ -183,8 +183,11 @@ func (h *LabelHandler) AddAssignee(w http.ResponseWriter, r *http.Request) {
 			"user_id": req.UserID,
 		}
 		h.events.Emit(r.Context(), boardID, userID, "assignee.added", "card", cardID, payload)
-		// Notify the new assignee
+		// Notify the new assignee + existing watchers
 		h.events.Notify(r.Context(), []string{req.UserID}, userID, "card.assigned", cardID, boardID, payload)
+		h.events.NotifyCardWatchers(r.Context(), cardID, boardID, userID, "card.assignee_added", payload)
+		// Auto-watch when added as assignee
+		h.events.AutoWatchCard(r.Context(), req.UserID, cardID)
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "assignee added"})

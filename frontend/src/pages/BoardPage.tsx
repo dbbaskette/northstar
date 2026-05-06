@@ -6,6 +6,7 @@ import BoardView from '@/components/board/BoardView'
 import BoardCalendarView from '@/components/board/BoardCalendarView'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import BoardSharingModal from '@/components/board/BoardSharingModal'
+import WatchToggle from '@/components/ui/WatchToggle'
 import CardModal from '@/components/card/CardModal'
 import ActivityFeed from '@/components/activity/ActivityFeed'
 import ArchivedPanel from '@/components/board/ArchivedPanel'
@@ -106,6 +107,12 @@ export default function BoardPage() {
             <Copy className="h-3.5 w-3.5" />
             Copy
           </button>
+          <WatchToggle
+            targetType="board"
+            targetID={board.id}
+            label
+            className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
+          />
           <button
             onClick={() => setShowShare(true)}
             className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"

@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS watchers;
+DROP TYPE IF EXISTS watch_target;

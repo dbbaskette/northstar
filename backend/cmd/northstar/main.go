@@ -70,6 +70,7 @@ func main() {
 	notifRepo := repository.NewNotificationRepo(pool)
 	apiTokenRepo := repository.NewAPITokenRepo(pool)
 	customFieldRepo := repository.NewCustomFieldRepo(pool)
+	watcherRepo := repository.NewWatcherRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -80,7 +81,7 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
-	events := service.NewEvents(activityRepo, notifRepo, hub)
+	events := service.NewEvents(activityRepo, notifRepo, watcherRepo, hub)
 	mentions := service.NewMentions(pool)
 	cardCopier := service.NewCardCopier(pool)
 	boardCopier := service.NewBoardCopier(pool)
@@ -105,6 +106,7 @@ func main() {
 	apiTokenHandler := handler.NewAPITokenHandler(apiTokenRepo)
 	customFieldHandler := handler.NewCustomFieldHandler(customFieldRepo, boardRepo)
 	templateHandler := handler.NewTemplateHandler(pool, boardRepo, teamRepo, boardCopier)
+	watcherHandler := handler.NewWatcherHandler(watcherRepo)
 
 	r := chi.NewRouter()
 
@@ -139,6 +141,12 @@ func main() {
 			r.Get("/auth/me", authHandler.Me)
 			r.Get("/search", searchHandler.Search)
 			r.Get("/templates", templateHandler.ListTemplates)
+
+			r.Route("/watch/{targetType}/{targetId}", func(r chi.Router) {
+				r.Get("/", watcherHandler.IsWatching)
+				r.Post("/", watcherHandler.Watch)
+				r.Delete("/", watcherHandler.Unwatch)
+			})
 
 			r.Route("/notifications", func(r chi.Router) {
 				r.Get("/", notifHandler.List)

@@ -13,11 +13,22 @@ import (
 type Events struct {
 	activityRepo *repository.ActivityRepo
 	notifRepo    *repository.NotificationRepo
+	watcherRepo  *repository.WatcherRepo
 	hub          *ws.Hub
 }
 
-func NewEvents(activityRepo *repository.ActivityRepo, notifRepo *repository.NotificationRepo, hub *ws.Hub) *Events {
-	return &Events{activityRepo: activityRepo, notifRepo: notifRepo, hub: hub}
+func NewEvents(
+	activityRepo *repository.ActivityRepo,
+	notifRepo *repository.NotificationRepo,
+	watcherRepo *repository.WatcherRepo,
+	hub *ws.Hub,
+) *Events {
+	return &Events{
+		activityRepo: activityRepo,
+		notifRepo:    notifRepo,
+		watcherRepo:  watcherRepo,
+		hub:          hub,
+	}
 }
 
 // Emit logs an activity and broadcasts a WebSocket event for the given board.
@@ -56,4 +67,30 @@ func (e *Events) Notify(
 			log.Warn().Err(err).Str("type", notifType).Str("user", uid).Msg("notification create failed")
 		}
 	}
+}
+
+// NotifyCardWatchers fans out to everyone watching the card directly,
+// the parent list, or the board it's on. Used for changes that watchers
+// asked to hear about.
+func (e *Events) NotifyCardWatchers(
+	ctx context.Context,
+	cardID, boardID, actorUserID, notifType string,
+	payload interface{},
+) {
+	if e == nil || e.watcherRepo == nil {
+		return
+	}
+	users, err := e.watcherRepo.WatchersForCard(ctx, cardID)
+	if err != nil {
+		return
+	}
+	e.Notify(ctx, users, actorUserID, notifType, cardID, boardID, payload)
+}
+
+// AutoWatchCard adds the user as a watcher of the card. Idempotent.
+func (e *Events) AutoWatchCard(ctx context.Context, userID, cardID string) {
+	if e == nil || e.watcherRepo == nil {
+		return
+	}
+	_ = e.watcherRepo.Watch(ctx, userID, "card", cardID)
 }
