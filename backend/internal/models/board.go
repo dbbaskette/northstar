@@ -13,6 +13,7 @@ type Board struct {
 	Description pgtype.Text        `json:"description,omitempty"`
 	Background  string             `json:"background"`
 	Visibility  string             `json:"visibility"`
+	IsTemplate  bool               `json:"is_template"`
 	IsArchived  bool               `json:"is_archived"`
 	CreatedBy   pgtype.UUID        `json:"created_by"`
 	CreatedAt   time.Time          `json:"created_at"`

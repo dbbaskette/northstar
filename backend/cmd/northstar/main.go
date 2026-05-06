@@ -104,6 +104,7 @@ func main() {
 	notifHandler := handler.NewNotificationHandler(notifRepo)
 	apiTokenHandler := handler.NewAPITokenHandler(apiTokenRepo)
 	customFieldHandler := handler.NewCustomFieldHandler(customFieldRepo, boardRepo)
+	templateHandler := handler.NewTemplateHandler(pool, boardRepo, teamRepo, boardCopier)
 
 	r := chi.NewRouter()
 
@@ -137,6 +138,7 @@ func main() {
 
 			r.Get("/auth/me", authHandler.Me)
 			r.Get("/search", searchHandler.Search)
+			r.Get("/templates", templateHandler.ListTemplates)
 
 			r.Route("/notifications", func(r chi.Router) {
 				r.Get("/", notifHandler.List)
@@ -172,6 +174,7 @@ func main() {
 
 					r.Post("/boards", boardHandler.Create)
 					r.Get("/boards", boardHandler.ListByTeam)
+					r.Post("/boards/from-template", templateHandler.CreateFromTemplate)
 				})
 			})
 
@@ -181,6 +184,7 @@ func main() {
 				r.Delete("/", boardHandler.Delete)
 				r.Patch("/visibility", boardHandler.UpdateVisibility)
 				r.Post("/copy", boardHandler.Copy)
+				r.Patch("/template", templateHandler.ToggleTemplate)
 				r.Get("/members", boardHandler.ListMembers)
 				r.Post("/members", boardHandler.AddMember)
 				r.Delete("/members/{userId}", boardHandler.RemoveMember)

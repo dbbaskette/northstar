@@ -7,6 +7,7 @@ import {
   useUpdateBoardVisibility,
 } from '@/api/boardMembers'
 import { useCreateInvite, useDeleteInvite, useInvites } from '@/api/invites'
+import { useToggleTemplate } from '@/api/templates'
 import { useUsers } from '@/api/users'
 import type { Board } from '@/api/boards'
 import Avatar from '../ui/Avatar'
@@ -26,6 +27,7 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
   const removeMember = useRemoveBoardMember(board.id)
   const createInvite = useCreateInvite(board.id)
   const deleteInvite = useDeleteInvite(board.id)
+  const toggleTemplate = useToggleTemplate(board.id)
   const [error, setError] = useState('')
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
 
@@ -195,6 +197,21 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
                 ))}
               </div>
             )}
+          </section>
+
+          <section>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={board.is_template}
+                onChange={(e) => toggleTemplate.mutate(e.target.checked)}
+                className="h-4 w-4 rounded"
+              />
+              <span className="text-gray-700 dark:text-gray-300">Use this board as a template</span>
+            </label>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Templates show up under "My templates" when creating a new board.
+            </p>
           </section>
 
           {isPrivate && (
