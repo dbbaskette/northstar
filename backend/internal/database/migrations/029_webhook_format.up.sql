@@ -1,0 +1,1 @@
+ALTER TABLE webhooks ADD COLUMN format VARCHAR(32) NOT NULL DEFAULT 'raw';

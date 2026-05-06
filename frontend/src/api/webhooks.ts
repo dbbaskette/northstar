@@ -7,6 +7,7 @@ export interface Webhook {
   url: string
   secret: string
   event_filters: string[]
+  format: 'raw' | 'google_chat'
   active: boolean
   created_at: string
 }
@@ -36,7 +37,11 @@ export function useWebhooks(boardId: string | null) {
 export function useCreateWebhook(boardId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { url: string; event_filters?: string[] }): Promise<Webhook> => {
+    mutationFn: async (input: {
+      url: string
+      format?: 'raw' | 'google_chat'
+      event_filters?: string[]
+    }): Promise<Webhook> => {
       const res = await api.post(`/boards/${boardId}/webhooks`, input)
       return res.data
     },

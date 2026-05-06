@@ -26,6 +26,7 @@ type Webhook struct {
 	URL          string      `json:"url"`
 	Secret       string      `json:"secret"`
 	EventFilters []string    `json:"event_filters"`
+	Format       string      `json:"format"` // "raw" or "google_chat"
 	Active       bool        `json:"active"`
 	CreatedBy    pgtype.UUID `json:"created_by"`
 	CreatedAt    time.Time   `json:"created_at"`
@@ -49,25 +50,29 @@ func generateSecret() string {
 	return hex.EncodeToString(b)
 }
 
-func (r *WebhookRepo) Create(ctx context.Context, boardID, url, createdBy string, filters []string) (*Webhook, error) {
+func (r *WebhookRepo) Create(ctx context.Context, boardID, url, format, createdBy string, filters []string) (*Webhook, error) {
 	if filters == nil {
 		filters = []string{}
+	}
+	if format == "" {
+		format = "raw"
 	}
 	filtersJSON, _ := json.Marshal(filters)
 	w := &Webhook{
 		URL:          url,
 		Secret:       generateSecret(),
 		EventFilters: filters,
+		Format:       format,
 		Active:       true,
 	}
 	w.BoardID.Scan(boardID)
 	w.CreatedBy.Scan(createdBy)
 
 	if err := r.pool.QueryRow(ctx, `
-		INSERT INTO webhooks (board_id, url, secret, event_filters, created_by)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO webhooks (board_id, url, secret, event_filters, format, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at`,
-		boardID, url, w.Secret, filtersJSON, createdBy,
+		boardID, url, w.Secret, filtersJSON, format, createdBy,
 	).Scan(&w.ID, &w.CreatedAt); err != nil {
 		return nil, err
 	}
@@ -76,7 +81,7 @@ func (r *WebhookRepo) Create(ctx context.Context, boardID, url, createdBy string
 
 func (r *WebhookRepo) ListByBoard(ctx context.Context, boardID string) ([]Webhook, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, board_id, url, secret, event_filters, active, created_by, created_at
+		`SELECT id, board_id, url, secret, event_filters, format, active, created_by, created_at
 		 FROM webhooks WHERE board_id = $1 ORDER BY created_at DESC`, boardID)
 	if err != nil {
 		return nil, err
@@ -89,7 +94,7 @@ func (r *WebhookRepo) ListByBoard(ctx context.Context, boardID string) ([]Webhoo
 			w           Webhook
 			filtersJSON []byte
 		)
-		if err := rows.Scan(&w.ID, &w.BoardID, &w.URL, &w.Secret, &filtersJSON,
+		if err := rows.Scan(&w.ID, &w.BoardID, &w.URL, &w.Secret, &filtersJSON, &w.Format,
 			&w.Active, &w.CreatedBy, &w.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -114,7 +119,7 @@ func (r *WebhookRepo) Delete(ctx context.Context, id string) error {
 // empty (subscribes to everything) or contains the event.
 func (r *WebhookRepo) MatchingHooks(ctx context.Context, boardID, event string) ([]Webhook, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, board_id, url, secret, event_filters, active, created_by, created_at
+		SELECT id, board_id, url, secret, event_filters, format, active, created_by, created_at
 		FROM webhooks
 		WHERE board_id = $1 AND active = TRUE
 		  AND (jsonb_array_length(event_filters) = 0 OR event_filters @> to_jsonb($2::text))`,
@@ -130,7 +135,7 @@ func (r *WebhookRepo) MatchingHooks(ctx context.Context, boardID, event string) 
 			w           Webhook
 			filtersJSON []byte
 		)
-		if err := rows.Scan(&w.ID, &w.BoardID, &w.URL, &w.Secret, &filtersJSON,
+		if err := rows.Scan(&w.ID, &w.BoardID, &w.URL, &w.Secret, &filtersJSON, &w.Format,
 			&w.Active, &w.CreatedBy, &w.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -155,6 +160,7 @@ type DeliveryDispatch struct {
 	WebhookID  string
 	URL        string
 	Secret     string
+	Format     string
 	Event      string
 	Payload    []byte
 	Attempts   int
@@ -165,7 +171,7 @@ func (r *WebhookRepo) PendingDeliveries(ctx context.Context, now time.Time, limi
 		limit = 50
 	}
 	rows, err := r.pool.Query(ctx, `
-		SELECT d.id::text, d.webhook_id::text, w.url, w.secret, d.event, d.payload, d.attempts
+		SELECT d.id::text, d.webhook_id::text, w.url, w.secret, w.format, d.event, d.payload, d.attempts
 		FROM webhook_deliveries d
 		JOIN webhooks w ON d.webhook_id = w.id
 		WHERE d.status IN ('pending', 'retrying')
@@ -182,7 +188,7 @@ func (r *WebhookRepo) PendingDeliveries(ctx context.Context, now time.Time, limi
 	var out []DeliveryDispatch
 	for rows.Next() {
 		var d DeliveryDispatch
-		if err := rows.Scan(&d.ID, &d.WebhookID, &d.URL, &d.Secret, &d.Event, &d.Payload, &d.Attempts); err != nil {
+		if err := rows.Scan(&d.ID, &d.WebhookID, &d.URL, &d.Secret, &d.Format, &d.Event, &d.Payload, &d.Attempts); err != nil {
 			return nil, err
 		}
 		out = append(out, d)

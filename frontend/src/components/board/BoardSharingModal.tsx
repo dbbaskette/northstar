@@ -33,6 +33,7 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
   const createWebhook = useCreateWebhook(board.id)
   const deleteWebhook = useDeleteWebhook(board.id)
   const [newWebhookUrl, setNewWebhookUrl] = useState('')
+  const [newWebhookFormat, setNewWebhookFormat] = useState<'raw' | 'google_chat'>('raw')
   const [showWebhookSecret, setShowWebhookSecret] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
@@ -228,26 +229,40 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
               </span>
             </div>
             <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
-              POST every board event to a URL. Payloads are signed with{' '}
+              POST every board event to a URL. Pick <span className="font-medium">Google Chat</span> if
+              you're pasting in an incoming-webhook URL from a Workspace space — events will be
+              wrapped as a chat message. Otherwise the raw signed payload is sent with{' '}
               <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">X-Northstar-Signature</code>.
             </p>
             <form
               onSubmit={async (e) => {
                 e.preventDefault()
                 if (!newWebhookUrl.trim()) return
-                const created = await createWebhook.mutateAsync({ url: newWebhookUrl.trim() })
+                const created = await createWebhook.mutateAsync({
+                  url: newWebhookUrl.trim(),
+                  format: newWebhookFormat,
+                })
                 setNewWebhookUrl('')
+                setNewWebhookFormat('raw')
                 setShowWebhookSecret(created.secret)
               }}
-              className="mb-3 flex gap-2"
+              className="mb-3 flex flex-wrap gap-2"
             >
               <input
                 type="url"
                 value={newWebhookUrl}
                 onChange={(e) => setNewWebhookUrl(e.target.value)}
                 placeholder="https://example.com/webhook"
-                className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                className="flex-1 min-w-48 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
               />
+              <select
+                value={newWebhookFormat}
+                onChange={(e) => setNewWebhookFormat(e.target.value as 'raw' | 'google_chat')}
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              >
+                <option value="raw">Raw (signed)</option>
+                <option value="google_chat">Google Chat</option>
+              </select>
               <button
                 type="submit"
                 disabled={!newWebhookUrl.trim() || createWebhook.isPending}
@@ -291,6 +306,9 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
                     />
                     <span className="flex-1 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
                       {wh.url}
+                    </span>
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                      {wh.format === 'google_chat' ? 'gchat' : 'raw'}
                     </span>
                     <button
                       onClick={() => deleteWebhook.mutate(wh.id)}

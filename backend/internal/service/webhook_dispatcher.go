@@ -26,6 +26,58 @@ func uuidStr(id pgtype.UUID) string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
+// formatGoogleChat wraps a Northstar event payload in the
+// {"text": "..."} schema accepted by Google Chat incoming webhooks.
+// The original event/data are also embedded after the summary so
+// power users can build Chat-side automations off them.
+func formatGoogleChat(event string, raw []byte) ([]byte, error) {
+	var envelope struct {
+		Event string                 `json:"event"`
+		Data  map[string]interface{} `json:"data"`
+	}
+	_ = json.Unmarshal(raw, &envelope)
+
+	verb := chatVerbForEvent(event)
+	cardTitle, _ := envelope.Data["card_title"].(string)
+	if cardTitle == "" {
+		cardTitle, _ = envelope.Data["title"].(string)
+	}
+
+	summary := "Northstar: " + verb
+	if cardTitle != "" {
+		summary += " — " + cardTitle
+	}
+	summary += "  (`" + event + "`)"
+
+	return json.Marshal(map[string]string{"text": summary})
+}
+
+func chatVerbForEvent(event string) string {
+	switch event {
+	case "card.created":
+		return "card created"
+	case "card.updated":
+		return "card updated"
+	case "card.moved":
+		return "card moved"
+	case "card.deleted":
+		return "card deleted"
+	case "card.reordered":
+		return "card reordered"
+	case "comment.added":
+		return "new comment"
+	case "list.created":
+		return "list created"
+	case "list.archived":
+		return "list archived"
+	case "label.attached":
+		return "label attached"
+	case "label.detached":
+		return "label detached"
+	}
+	return event
+}
+
 // WebhookDispatcher fans Emit() events out to matching webhooks and
 // runs a background loop that drains the delivery queue.
 type WebhookDispatcher struct {
@@ -104,13 +156,28 @@ func (d *WebhookDispatcher) tick(ctx context.Context) {
 }
 
 func (d *WebhookDispatcher) deliver(ctx context.Context, dispatch repository.DeliveryDispatch) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dispatch.URL, bytes.NewReader(dispatch.Payload))
+	body := dispatch.Payload
+	if dispatch.Format == "google_chat" {
+		// Google Chat incoming-webhook spaces accept {text: "..."} or
+		// rich card_v2 messages. We send a friendly summary line so the
+		// channel stays readable.
+		formatted, err := formatGoogleChat(dispatch.Event, dispatch.Payload)
+		if err == nil {
+			body = formatted
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dispatch.URL, bytes.NewReader(body))
 	if err != nil {
 		_ = d.hookRepo.MarkRetry(ctx, dispatch.ID, 0, err.Error(), dispatch.Attempts)
 		return
 	}
+
+	// HMAC signature only meaningful for raw subscribers; Google Chat
+	// authenticates the URL itself (the URL contains a token+key), so
+	// we still include the header but it's harmless if ignored.
 	mac := hmac.New(sha256.New, []byte(dispatch.Secret))
-	mac.Write(dispatch.Payload)
+	mac.Write(body)
 	sig := hex.EncodeToString(mac.Sum(nil))
 
 	req.Header.Set("Content-Type", "application/json")
@@ -124,11 +191,11 @@ func (d *WebhookDispatcher) deliver(ctx context.Context, dispatch repository.Del
 		return
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		_ = d.hookRepo.MarkDelivered(ctx, dispatch.ID, resp.StatusCode, string(body))
+		_ = d.hookRepo.MarkDelivered(ctx, dispatch.ID, resp.StatusCode, string(respBody))
 		return
 	}
-	_ = d.hookRepo.MarkRetry(ctx, dispatch.ID, resp.StatusCode, string(body), dispatch.Attempts)
+	_ = d.hookRepo.MarkRetry(ctx, dispatch.ID, resp.StatusCode, string(respBody), dispatch.Attempts)
 }

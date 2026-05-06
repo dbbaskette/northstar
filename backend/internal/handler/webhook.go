@@ -21,6 +21,7 @@ func NewWebhookHandler(hookRepo *repository.WebhookRepo, boardRepo *repository.B
 
 type createWebhookRequest struct {
 	URL          string   `json:"url"`
+	Format       string   `json:"format"` // "raw" (default) or "google_chat"
 	EventFilters []string `json:"event_filters"`
 }
 
@@ -44,7 +45,15 @@ func (h *WebhookHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hook, err := h.hookRepo.Create(r.Context(), boardID, req.URL, userID, req.EventFilters)
+	if req.Format == "" {
+		req.Format = "raw"
+	}
+	if req.Format != "raw" && req.Format != "google_chat" {
+		writeError(w, http.StatusBadRequest, "format must be 'raw' or 'google_chat'")
+		return
+	}
+
+	hook, err := h.hookRepo.Create(r.Context(), boardID, req.URL, req.Format, userID, req.EventFilters)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
