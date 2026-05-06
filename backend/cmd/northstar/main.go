@@ -77,6 +77,7 @@ func main() {
 	auditRepo := repository.NewAuditRepo(pool)
 	reportRepo := repository.NewReportRepo(pool)
 	voteRepo := repository.NewVoteRepo(pool)
+	cardLinkRepo := repository.NewCardLinkRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -129,6 +130,7 @@ func main() {
 	adminUserHandler := handler.NewAdminUserHandler(userRepo, auditRepo)
 	reportHandler := handler.NewReportHandler(reportRepo, boardRepo)
 	voteHandler := handler.NewVoteHandler(voteRepo)
+	cardLinkHandler := handler.NewCardLinkHandler(cardLinkRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -274,6 +276,8 @@ func main() {
 				r.Post("/move-to", cardHandler.MoveToList)
 				r.Post("/vote", voteHandler.Add)
 				r.Delete("/vote", voteHandler.Remove)
+				r.Get("/links", cardLinkHandler.List)
+				r.Post("/links", cardLinkHandler.Create)
 
 				r.Post("/labels", labelHandler.AttachToCard)
 				r.Delete("/labels/{labelId}", labelHandler.DetachFromCard)
@@ -321,6 +325,8 @@ func main() {
 				r.Delete("/", checklistHandler.DeleteItem)
 				r.Patch("/reorder", checklistHandler.ReorderItem)
 			})
+
+			r.Delete("/links/{linkId}", cardLinkHandler.Delete)
 
 			r.Route("/comments/{commentId}", func(r chi.Router) {
 				r.Patch("/", commentHandler.Update)

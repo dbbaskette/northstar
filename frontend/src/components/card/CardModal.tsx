@@ -28,6 +28,7 @@ import { useCreateLabel } from '@/api/labels'
 import { useMe } from '@/api/users'
 import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
+import CardLinks from './CardLinks'
 import CardCoverPicker from './CardCoverPicker'
 import CardCopyMoveModal from './CardCopyMoveModal'
 import CardCustomFields from './CardCustomFields'
@@ -458,6 +459,9 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
 
             {/* Custom fields */}
             <CardCustomFields boardId={board.id} cardId={card.id} card={card} />
+
+            {/* Linked cards */}
+            <CardLinks cardId={card.id} />
 
             {/* Reminders */}
             <CardReminders cardId={card.id} />
