@@ -68,6 +68,7 @@ func main() {
 	searchRepo := repository.NewSearchRepo(pool)
 	inviteRepo := repository.NewInviteRepo(pool)
 	notifRepo := repository.NewNotificationRepo(pool)
+	apiTokenRepo := repository.NewAPITokenRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -98,6 +99,7 @@ func main() {
 	userHandler := handler.NewUserHandler(userRepo, store)
 	inviteHandler := handler.NewInviteHandler(inviteRepo, boardRepo, teamRepo)
 	notifHandler := handler.NewNotificationHandler(notifRepo)
+	apiTokenHandler := handler.NewAPITokenHandler(apiTokenRepo)
 
 	r := chi.NewRouter()
 
@@ -127,7 +129,7 @@ func main() {
 		r.Get("/avatars/{userId}", userHandler.DownloadAvatar)
 
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.Auth(authService))
+			r.Use(middleware.Auth(authService, apiTokenRepo.LookupByToken))
 
 			r.Get("/auth/me", authHandler.Me)
 			r.Get("/search", searchHandler.Search)
@@ -137,6 +139,12 @@ func main() {
 				r.Get("/count", notifHandler.Count)
 				r.Post("/read-all", notifHandler.MarkAllRead)
 				r.Post("/{notificationId}/read", notifHandler.MarkRead)
+			})
+
+			r.Route("/auth/tokens", func(r chi.Router) {
+				r.Get("/", apiTokenHandler.List)
+				r.Post("/", apiTokenHandler.Create)
+				r.Delete("/{tokenId}", apiTokenHandler.Delete)
 			})
 
 			r.Route("/users", func(r chi.Router) {

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, Save } from 'lucide-react'
+import { Camera, Save, Key, Plus, Trash2, Copy, Check } from 'lucide-react'
 import { useMe, useUpdateProfile, useUploadAvatar } from '@/api/users'
+import {
+  useAPITokens,
+  useCreateAPIToken,
+  useDeleteAPIToken,
+} from '@/api/apiTokens'
 import { useAuthStore } from '@/stores/authStore'
 import Avatar from '@/components/ui/Avatar'
 
@@ -202,6 +207,177 @@ export default function ProfilePage() {
           )}
         </div>
       </form>
+
+      <hr className="my-8 border-gray-200 dark:border-gray-700" />
+      <APITokens />
     </div>
+  )
+}
+
+function APITokens() {
+  const { data: tokens = [] } = useAPITokens()
+  const createToken = useCreateAPIToken()
+  const deleteToken = useDeleteAPIToken()
+
+  const [showForm, setShowForm] = useState(false)
+  const [name, setName] = useState('')
+  const [expiresIn, setExpiresIn] = useState(90)
+  const [newPlain, setNewPlain] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    const tok = await createToken.mutateAsync({ name: name.trim(), expires_in_days: expiresIn })
+    setNewPlain(tok.token || null)
+    setName('')
+    setShowForm(false)
+  }
+
+  const copy = async () => {
+    if (!newPlain) return
+    try {
+      await navigator.clipboard.writeText(newPlain)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // ignore
+    }
+  }
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <Key className="h-5 w-5" />
+          Personal API tokens
+        </div>
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New token
+          </button>
+        )}
+      </div>
+
+      <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+        Use these for scripts and external integrations. They authenticate as you with the same
+        permissions. Send as <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">Authorization: Bearer ns_…</code>.
+      </p>
+
+      {newPlain && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/30">
+          <div className="mb-1 text-xs font-semibold text-amber-800 dark:text-amber-200">
+            Copy this token now — it will not be shown again.
+          </div>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={newPlain}
+              onFocus={(e) => e.currentTarget.select()}
+              className="flex-1 rounded bg-white px-2 py-1 font-mono text-xs text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+            />
+            <button
+              onClick={copy}
+              className="rounded p-1.5 text-gray-500 hover:bg-amber-100 dark:hover:bg-amber-800"
+            >
+              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => setNewPlain(null)}
+              className="rounded px-2 py-1 text-xs text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-800"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+        >
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+              Token name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. CI script"
+              className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              required
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+              Expires in (days)
+            </label>
+            <input
+              type="number"
+              value={expiresIn}
+              onChange={(e) => setExpiresIn(parseInt(e.target.value, 10) || 0)}
+              min={0}
+              className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            Create
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowForm(false)}
+            className="rounded-lg px-3 py-1 text-xs text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+        </form>
+      )}
+
+      <div className="space-y-2">
+        {tokens.map((t) => {
+          const lastUsed =
+            t.last_used_at && 'Valid' in t.last_used_at && t.last_used_at.Valid
+              ? new Date(t.last_used_at.Time).toLocaleString()
+              : 'never'
+          const expires =
+            t.expires_at && 'Valid' in t.expires_at && t.expires_at.Valid
+              ? new Date(t.expires_at.Time).toLocaleDateString()
+              : '—'
+          return (
+            <div
+              key={t.id}
+              className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+            >
+              <div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Last used: {lastUsed} · Expires: {expires}
+                </div>
+              </div>
+              <button
+                onClick={() => deleteToken.mutate(t.id)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-700"
+                title="Revoke"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )
+        })}
+        {tokens.length === 0 && !newPlain && (
+          <div className="text-xs text-gray-400">No tokens yet.</div>
+        )}
+      </div>
+    </section>
   )
 }
