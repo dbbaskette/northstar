@@ -29,10 +29,21 @@ const PURIFY_CONFIG = {
   ALLOWED_URI_REGEXP: /^(?:https?|mailto|tel|#):/i,
 }
 
+// Highlight @username tokens before Markdown parsing so they survive
+// through `marked` and `DOMPurify`.
+const MENTION_RE = /(^|[^\w@])@([a-zA-Z0-9_]+)/g
+
+function highlightMentions(source: string): string {
+  return source.replace(MENTION_RE, (_match, prefix, username) => {
+    return `${prefix}<span class="northstar-mention">@${username}</span>`
+  })
+}
+
 export default function Markdown({ source, className }: Props) {
   const safeHtml = useMemo(() => {
     if (!source) return ''
-    const raw = marked.parse(source, { async: false }) as string
+    const withMentions = highlightMentions(source)
+    const raw = marked.parse(withMentions, { async: false }) as string
     return DOMPurify.sanitize(raw, PURIFY_CONFIG)
   }, [source])
 

@@ -19,10 +19,11 @@ type CardHandler struct {
 	cardRepo *repository.CardRepo
 	listRepo *repository.ListRepo
 	events   *service.Events
+	mentions *service.Mentions
 }
 
-func NewCardHandler(cardRepo *repository.CardRepo, listRepo *repository.ListRepo, events *service.Events) *CardHandler {
-	return &CardHandler{cardRepo: cardRepo, listRepo: listRepo, events: events}
+func NewCardHandler(cardRepo *repository.CardRepo, listRepo *repository.ListRepo, events *service.Events, mentions *service.Mentions) *CardHandler {
+	return &CardHandler{cardRepo: cardRepo, listRepo: listRepo, events: events, mentions: mentions}
 }
 
 type createCardRequest struct {
@@ -160,6 +161,18 @@ func (h *CardHandler) Update(w http.ResponseWriter, r *http.Request) {
 			"card_id": cardID,
 			"title":   req.Title,
 		})
+
+		// Notify users mentioned in the description
+		if h.mentions != nil && req.Description != "" {
+			usernames := h.mentions.Extract(req.Description)
+			if mentionedIDs, err := h.mentions.Resolve(r.Context(), usernames); err == nil && len(mentionedIDs) > 0 {
+				h.events.Notify(r.Context(), mentionedIDs, userID, "mention", cardID, boardID, map[string]interface{}{
+					"card_id":    cardID,
+					"card_title": req.Title,
+					"in":         "description",
+				})
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})

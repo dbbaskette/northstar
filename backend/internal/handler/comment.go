@@ -18,6 +18,7 @@ type CommentHandler struct {
 	cardRepo    *repository.CardRepo
 	listRepo    *repository.ListRepo
 	events      *service.Events
+	mentions    *service.Mentions
 }
 
 func NewCommentHandler(
@@ -25,12 +26,14 @@ func NewCommentHandler(
 	cardRepo *repository.CardRepo,
 	listRepo *repository.ListRepo,
 	events *service.Events,
+	mentions *service.Mentions,
 ) *CommentHandler {
 	return &CommentHandler{
 		commentRepo: commentRepo,
 		cardRepo:    cardRepo,
 		listRepo:    listRepo,
 		events:      events,
+		mentions:    mentions,
 	}
 }
 
@@ -84,6 +87,14 @@ func (h *CommentHandler) Create(w http.ResponseWriter, r *http.Request) {
 				recipients = append(recipients, uuidStr(a.ID))
 			}
 			h.events.Notify(r.Context(), recipients, userID, "comment.added", cardID, boardID, payload)
+
+			// Notify mentioned users (regardless of assignment)
+			if h.mentions != nil {
+				usernames := h.mentions.Extract(req.Body)
+				if mentionedIDs, err := h.mentions.Resolve(r.Context(), usernames); err == nil && len(mentionedIDs) > 0 {
+					h.events.Notify(r.Context(), mentionedIDs, userID, "mention", cardID, boardID, payload)
+				}
+			}
 		}
 	}
 

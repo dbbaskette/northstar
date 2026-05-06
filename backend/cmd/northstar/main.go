@@ -79,14 +79,15 @@ func main() {
 	go hub.Run()
 
 	events := service.NewEvents(activityRepo, notifRepo, hub)
+	mentions := service.NewMentions(pool)
 	authService := service.NewAuthService(userRepo, pool, cfg.JWTSecret)
 
 	authHandler := handler.NewAuthHandler(authService)
 	teamHandler := handler.NewTeamHandler(teamRepo)
 	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo)
 	listHandler := handler.NewListHandler(listRepo, events)
-	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events)
-	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events)
+	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events, mentions)
+	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events, mentions)
 	labelHandler := handler.NewLabelHandler(labelRepo, cardRepo, listRepo, events)
 	activityHandler := handler.NewActivityHandler(activityRepo)
 	wsHandler := handler.NewWSHandler(hub, authService)
