@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [pending, setPending] = useState(false)
   const login = useAuthStore((s) => s.login)
   const register = useAuthStore((s) => s.register)
-  const hydrate = useAuthStore((s) => s.hydrateFromAccessToken)
+  const hydrate = useAuthStore((s) => s.hydrateFromTokens)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -43,11 +43,12 @@ export default function LoginPage() {
     if (!location.hash || !location.hash.includes('access_token=')) return
     const hash = new URLSearchParams(location.hash.replace(/^#/, ''))
     const access = hash.get('access_token')
+    const refresh = hash.get('refresh_token') || undefined
     const returnTo = hash.get('return_to') || '/dashboard'
     if (!access) return
     ;(async () => {
       try {
-        await hydrate(access)
+        await hydrate(access, refresh)
         // Clear the fragment before navigating so refreshing doesn't replay it.
         window.history.replaceState({}, '', '/login')
         navigate(returnTo, { replace: true })
