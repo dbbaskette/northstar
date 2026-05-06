@@ -231,5 +231,12 @@ func (r *CardRepo) GetCardWithDetails(ctx context.Context, id string) (*models.C
 	}
 	card.Checklists = checklists
 
+	attachmentRepo := &AttachmentRepo{pool: r.pool}
+	attachments, err := attachmentRepo.ListByCard(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	card.Attachments = attachments
+
 	return card, nil
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/dbbaskette/northstar/internal/repository"
 	"github.com/dbbaskette/northstar/internal/service"
 	"github.com/dbbaskette/northstar/internal/static"
+	"github.com/dbbaskette/northstar/internal/storage"
 	"github.com/dbbaskette/northstar/internal/ws"
 )
 
@@ -63,6 +64,13 @@ func main() {
 	labelRepo := repository.NewLabelRepo(pool)
 	activityRepo := repository.NewActivityRepo(pool)
 	checklistRepo := repository.NewChecklistRepo(pool)
+	attachmentRepo := repository.NewAttachmentRepo(pool)
+
+	store, err := storage.NewFS(cfg.StoragePath)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to init storage backend")
+	}
+	logger.Info().Str("path", cfg.StoragePath).Msg("storage initialized")
 
 	hub := ws.NewHub()
 	go hub.Run()
@@ -80,6 +88,7 @@ func main() {
 	activityHandler := handler.NewActivityHandler(activityRepo)
 	wsHandler := handler.NewWSHandler(hub, authService)
 	checklistHandler := handler.NewChecklistHandler(checklistRepo, cardRepo, listRepo, events)
+	attachmentHandler := handler.NewAttachmentHandler(attachmentRepo, cardRepo, listRepo, store, events)
 
 	r := chi.NewRouter()
 
@@ -157,6 +166,12 @@ func main() {
 				r.Delete("/assignees/{userId}", labelHandler.RemoveAssignee)
 				r.Post("/comments", commentHandler.Create)
 				r.Post("/checklists", checklistHandler.Create)
+				r.Post("/attachments", attachmentHandler.Upload)
+			})
+
+			r.Route("/attachments/{attachmentId}", func(r chi.Router) {
+				r.Get("/download", attachmentHandler.Download)
+				r.Delete("/", attachmentHandler.Delete)
 			})
 
 			r.Route("/checklists/{checklistId}", func(r chi.Router) {

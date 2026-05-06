@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from './client'
 import type { BoardCard } from './boards'
 import type { Checklist } from './checklists'
+import type { Attachment } from './attachments'
 
 export interface CardLabel {
   id: string
@@ -33,6 +34,7 @@ export interface CardDetail extends BoardCard {
   assignees?: CardAssignee[]
   comments?: CardComment[]
   checklists?: Checklist[]
+  attachments?: Attachment[]
 }
 
 export function useCard(cardId: string | null) {

@@ -12,12 +12,18 @@ type Config struct {
 	DatabaseURL string
 	JWTSecret   string
 	LogLevel    string
+	StoragePath string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:     8180,
-		LogLevel: "info",
+		Port:        8180,
+		LogLevel:    "info",
+		StoragePath: "./storage",
+	}
+
+	if sp := os.Getenv("STORAGE_PATH"); sp != "" {
+		cfg.StoragePath = sp
 	}
 
 	if p := os.Getenv("PORT"); p != "" {

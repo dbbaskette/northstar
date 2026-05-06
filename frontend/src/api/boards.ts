@@ -39,6 +39,7 @@ export interface BoardCard {
   created_at?: string
   checklist_total?: number
   checklist_done?: number
+  attachment_count?: number
 }
 
 export interface BoardLabel {

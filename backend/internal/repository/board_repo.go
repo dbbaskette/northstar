@@ -189,6 +189,13 @@ func (r *BoardRepo) GetFullBoard(ctx context.Context, id string) (*models.Board,
 			if err != nil {
 				return nil, err
 			}
+
+			attachmentRepo := &AttachmentRepo{pool: r.pool}
+			attachCounts, err := attachmentRepo.CountsByCardIDs(ctx, allCardIDs)
+			if err != nil {
+				return nil, err
+			}
+
 			for i := range board.Lists {
 				for j := range board.Lists[i].Cards {
 					c := &board.Lists[i].Cards[j]
@@ -197,6 +204,9 @@ func (r *BoardRepo) GetFullBoard(ctx context.Context, id string) (*models.Board,
 					if v, ok := counts[cardID]; ok {
 						c.ChecklistTotal = v[0]
 						c.ChecklistDone = v[1]
+					}
+					if n, ok := attachCounts[cardID]; ok {
+						c.AttachmentCount = n
 					}
 				}
 			}

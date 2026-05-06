@@ -8,6 +8,10 @@ frontend/node_modules/
 frontend/dist/
 frontend/tsconfig.tsbuildinfo
 
+# Local attachment storage (default STORAGE_PATH)
+backend/storage/
+storage/
+
 # IDE
 .idea/
 .vscode/
