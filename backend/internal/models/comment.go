@@ -7,11 +7,18 @@ import (
 )
 
 type Comment struct {
-	ID        pgtype.UUID `json:"id"`
-	CardID    pgtype.UUID `json:"card_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-	Body      string      `json:"body"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	User      *User       `json:"user,omitempty"`
+	ID        pgtype.UUID        `json:"id"`
+	CardID    pgtype.UUID        `json:"card_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Body      string             `json:"body"`
+	CreatedAt time.Time          `json:"created_at"`
+	UpdatedAt time.Time          `json:"updated_at"`
+	User      *User              `json:"user,omitempty"`
+	Reactions []CommentReaction  `json:"reactions,omitempty"`
+}
+
+type CommentReaction struct {
+	Emoji   string   `json:"emoji"`
+	Count   int      `json:"count"`
+	UserIDs []string `json:"user_ids"`
 }

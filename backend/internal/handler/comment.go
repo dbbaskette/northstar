@@ -118,6 +118,28 @@ func (h *CommentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+func (h *CommentHandler) ToggleReaction(w http.ResponseWriter, r *http.Request) {
+	commentID := chi.URLParam(r, "commentId")
+	emoji := chi.URLParam(r, "emoji")
+	userID := middleware.GetUserID(r.Context())
+
+	if emoji == "" {
+		writeError(w, http.StatusBadRequest, "emoji is required")
+		return
+	}
+
+	active, err := h.commentRepo.ToggleReaction(r.Context(), commentID, userID, emoji)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"emoji":  emoji,
+		"active": active,
+	})
+}
+
 func (h *CommentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	commentID := chi.URLParam(r, "commentId")
 

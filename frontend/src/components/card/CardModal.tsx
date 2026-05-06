@@ -21,9 +21,11 @@ import {
   useDeleteComment,
   useAttachLabel,
   useDetachLabel,
+  useToggleReaction,
 } from '@/api/cards'
 import type { Board, CardPriority } from '@/api/boards'
 import { useCreateLabel } from '@/api/labels'
+import { useMe } from '@/api/users'
 import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
 import CardCoverPicker from './CardCoverPicker'
@@ -58,6 +60,8 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
   const deleteCard = useDeleteCard(board.id)
   const addComment = useAddComment(board.id, cardId || '')
   const deleteComment = useDeleteComment(board.id, cardId || '')
+  const toggleReaction = useToggleReaction(board.id, cardId || '')
+  const { data: me } = useMe()
   const attachLabel = useAttachLabel(cardId || '')
   const detachLabel = useDetachLabel(cardId || '')
   const createLabel = useCreateLabel(board.id)
@@ -506,14 +510,41 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                             {new Date(c.created_at).toLocaleString()}
                           </span>
                         </div>
-                        <Markdown source={c.body} className="text-gray-800" />
+                        <Markdown source={c.body} className="text-gray-800 dark:text-gray-200" />
                       </div>
-                      <button
-                        onClick={() => deleteComment.mutate(c.id)}
-                        className="mt-1 text-xs text-gray-500 hover:text-red-600"
-                      >
-                        Delete
-                      </button>
+
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        {(c.reactions || []).map((r) => {
+                          const mine = !!me && r.user_ids.includes(me.id)
+                          return (
+                            <button
+                              key={r.emoji}
+                              onClick={() =>
+                                toggleReaction.mutate({ commentId: c.id, emoji: r.emoji })
+                              }
+                              className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                                mine
+                                  ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                              }`}
+                            >
+                              <span>{r.emoji}</span>
+                              <span className="font-medium">{r.count}</span>
+                            </button>
+                          )
+                        })}
+                        <ReactionPicker
+                          onPick={(emoji) =>
+                            toggleReaction.mutate({ commentId: c.id, emoji })
+                          }
+                        />
+                        <button
+                          onClick={() => deleteComment.mutate(c.id)}
+                          className="ml-auto text-xs text-gray-500 hover:text-red-600 dark:text-gray-400"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -559,10 +590,45 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
           currentBoardId={board.id}
           onClose={() => {
             setCopyMoveMode(null)
-            // For 'move', the card is now elsewhere — close the parent modal too
             if (copyMoveMode === 'move') onClose()
           }}
         />
+      )}
+    </div>
+  )
+}
+
+const QUICK_REACTIONS = ['👍', '👎', '❤️', '🎉', '😄', '😕', '🚀', '👀']
+
+function ReactionPicker({ onPick }: { onPick: (emoji: string) => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setOpen(!open)}
+        className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+        title="Add reaction"
+      >
+        +
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-20 mt-1 flex gap-0.5 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            {QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => {
+                  onPick(emoji)
+                  setOpen(false)
+                }}
+                className="rounded p-1 text-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

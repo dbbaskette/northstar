@@ -353,5 +353,19 @@ func (r *CardRepo) GetCardWithDetails(ctx context.Context, id string) (*models.C
 	}
 	card.Attachments = attachments
 
+	if len(card.Comments) > 0 {
+		commentRepo := &CommentRepo{pool: r.pool}
+		reactionsByComment, err := commentRepo.ReactionsByCardID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		for i := range card.Comments {
+			cid := uuidToStr(card.Comments[i].ID)
+			if rs, ok := reactionsByComment[cid]; ok {
+				card.Comments[i].Reactions = rs
+			}
+		}
+	}
+
 	return card, nil
 }

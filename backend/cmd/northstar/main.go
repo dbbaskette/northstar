@@ -242,6 +242,7 @@ func main() {
 			r.Route("/comments/{commentId}", func(r chi.Router) {
 				r.Patch("/", commentHandler.Update)
 				r.Delete("/", commentHandler.Delete)
+				r.Post("/reactions/{emoji}", commentHandler.ToggleReaction)
 			})
 
 			r.Post("/invites/{token}/accept", inviteHandler.Accept)

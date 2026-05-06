@@ -19,6 +19,12 @@ export interface CardAssignee {
   avatar_url?: { String: string; Valid: boolean } | null
 }
 
+export interface CommentReaction {
+  emoji: string
+  count: number
+  user_ids: string[]
+}
+
 export interface CardComment {
   id: string
   card_id: string
@@ -27,6 +33,7 @@ export interface CardComment {
   created_at: string
   updated_at: string
   user?: CardAssignee
+  reactions?: CommentReaction[]
 }
 
 export interface CardDetail extends BoardCard {
@@ -135,6 +142,21 @@ export function useAddComment(boardId: string, cardId: string) {
     mutationFn: async (body: string): Promise<CardComment> => {
       const res = await api.post(`/cards/${cardId}/comments`, { body })
       return res.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['card', cardId] })
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+}
+
+export function useToggleReaction(boardId: string, cardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { commentId: string; emoji: string }) => {
+      await api.post(
+        `/comments/${input.commentId}/reactions/${encodeURIComponent(input.emoji)}`,
+      )
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['card', cardId] })
