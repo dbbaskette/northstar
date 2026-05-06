@@ -6,6 +6,7 @@ northstar-linux-amd64
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
 
 # IDE
 .idea/

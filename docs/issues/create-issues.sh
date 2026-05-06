@@ -24,28 +24,41 @@ if ! command -v gh > /dev/null; then
   exit 1
 fi
 
-if ! gh repo view > /dev/null 2>&1; then
+if [ "$DRY_RUN" != "1" ] && ! gh repo view > /dev/null 2>&1; then
   echo "Not in a repo recognized by gh. Run \`git init\` and \`gh repo create\` first."
   exit 1
 fi
 
 # Pre-create labels if requested
 if [ "$CREATE_LABELS" = "1" ]; then
-  declare -A LABEL_COLORS=(
-    [P0]=B60205 [P1]=D93F0B [P2]=FBCA04
-    [feature]=0E8A16 [ops]=5319E7
-    [backend]=1D76DB [frontend]=0075CA
-    [area:cards]=C5DEF5 [area:boards]=C5DEF5 [area:platform]=C5DEF5
-    [area:collaboration]=C5DEF5 [area:integrations]=C5DEF5
-    [area:auth]=C5DEF5 [area:admin]=C5DEF5 [area:permissions]=C5DEF5
-    [area:search]=C5DEF5 [area:users]=C5DEF5
-    [needs:storage]=FBCA04 [needs:email]=FBCA04 [needs:cron]=FBCA04
-    [needs:slack-app]=FBCA04 [needs:inbound-email]=FBCA04
-    [size:large]=E99695
-  )
-  for label in "${!LABEL_COLORS[@]}"; do
-    gh label create "$label" --color "${LABEL_COLORS[$label]}" --force 2>/dev/null || true
-  done
+  while IFS='|' read -r name color; do
+    [ -z "$name" ] && continue
+    gh label create "$name" --color "$color" --force >/dev/null 2>&1 || true
+  done <<'LABELS'
+P0|B60205
+P1|D93F0B
+P2|FBCA04
+feature|0E8A16
+ops|5319E7
+backend|1D76DB
+frontend|0075CA
+area:cards|C5DEF5
+area:boards|C5DEF5
+area:platform|C5DEF5
+area:collaboration|C5DEF5
+area:integrations|C5DEF5
+area:auth|C5DEF5
+area:admin|C5DEF5
+area:permissions|C5DEF5
+area:search|C5DEF5
+area:users|C5DEF5
+needs:storage|FBCA04
+needs:email|FBCA04
+needs:cron|FBCA04
+needs:slack-app|FBCA04
+needs:inbound-email|FBCA04
+size:large|E99695
+LABELS
   echo "Labels ensured."
 fi
 
