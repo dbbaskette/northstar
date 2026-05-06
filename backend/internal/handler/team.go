@@ -15,10 +15,26 @@ import (
 
 type TeamHandler struct {
 	teamRepo *repository.TeamRepo
+	audit    *repository.AuditRepo
 }
 
-func NewTeamHandler(teamRepo *repository.TeamRepo) *TeamHandler {
-	return &TeamHandler{teamRepo: teamRepo}
+func NewTeamHandler(teamRepo *repository.TeamRepo, audit *repository.AuditRepo) *TeamHandler {
+	return &TeamHandler{teamRepo: teamRepo, audit: audit}
+}
+
+func (h *TeamHandler) logAudit(r *http.Request, action, targetType, targetID string, meta map[string]interface{}) {
+	if h.audit == nil {
+		return
+	}
+	_ = h.audit.Insert(r.Context(), repository.AuditInsert{
+		ActorUserID: middleware.GetUserID(r.Context()),
+		Action:      action,
+		TargetType:  targetType,
+		TargetID:    targetID,
+		IP:          middleware.ClientIP(r),
+		UserAgent:   r.UserAgent(),
+		Metadata:    meta,
+	})
 }
 
 type createTeamRequest struct {
@@ -156,6 +172,7 @@ func (h *TeamHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAudit(r, "team.deleted", "team", teamID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
@@ -184,6 +201,9 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAudit(r, "team.member_added", "team", teamID, map[string]interface{}{
+		"user_id": req.UserID, "role": req.Role,
+	})
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "member added"})
 }
 
@@ -203,6 +223,9 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAudit(r, "team.member_removed", "team", teamID, map[string]interface{}{
+		"user_id": memberID,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"status": "member removed"})
 }
 
@@ -228,6 +251,9 @@ func (h *TeamHandler) UpdateMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAudit(r, "team.role_changed", "team", teamID, map[string]interface{}{
+		"user_id": memberID, "new_role": req.Role,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"status": "role updated"})
 }
 

@@ -5,15 +5,30 @@ import (
 	"net/http"
 
 	"github.com/dbbaskette/northstar/internal/middleware"
+	"github.com/dbbaskette/northstar/internal/repository"
 	"github.com/dbbaskette/northstar/internal/service"
 )
 
 type AuthHandler struct {
 	authService *service.AuthService
+	audit       *repository.AuditRepo
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService *service.AuthService, audit *repository.AuditRepo) *AuthHandler {
+	return &AuthHandler{authService: authService, audit: audit}
+}
+
+func (h *AuthHandler) logAudit(r *http.Request, userID, action string, meta map[string]interface{}) {
+	if h.audit == nil {
+		return
+	}
+	_ = h.audit.Insert(r.Context(), repository.AuditInsert{
+		ActorUserID: userID,
+		Action:      action,
+		IP:          middleware.ClientIP(r),
+		UserAgent:   r.UserAgent(),
+		Metadata:    meta,
+	})
 }
 
 type registerRequest struct {
@@ -51,10 +66,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, tokens, err := h.authService.Register(r.Context(), req.Email, req.Username, req.Password, req.DisplayName)
 	if err != nil {
+		h.logAudit(r, "", "auth.register_failed", map[string]interface{}{"email": req.Email, "error": err.Error()})
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
 
+	h.logAudit(r, uuidStr(user.ID), "auth.register", map[string]interface{}{"email": user.Email})
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"user":          user,
 		"access_token":  tokens.AccessToken,
@@ -76,10 +93,12 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, tokens, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
+		h.logAudit(r, "", "auth.login_failed", map[string]interface{}{"email": req.Email})
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
+	h.logAudit(r, uuidStr(user.ID), "auth.login", map[string]interface{}{"email": user.Email})
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"user":          user,
 		"access_token":  tokens.AccessToken,

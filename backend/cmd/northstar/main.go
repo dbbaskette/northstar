@@ -74,6 +74,7 @@ func main() {
 	reminderRepo := repository.NewReminderRepo(pool)
 	webhookRepo := repository.NewWebhookRepo(pool)
 	automationRepo := repository.NewAutomationRepo(pool)
+	auditRepo := repository.NewAuditRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -94,9 +95,9 @@ func main() {
 	boardCopier := service.NewBoardCopier(pool)
 	authService := service.NewAuthService(userRepo, pool, cfg.JWTSecret)
 
-	authHandler := handler.NewAuthHandler(authService)
-	teamHandler := handler.NewTeamHandler(teamRepo)
-	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo, boardCopier)
+	authHandler := handler.NewAuthHandler(authService, auditRepo)
+	teamHandler := handler.NewTeamHandler(teamRepo, auditRepo)
+	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo, boardCopier, auditRepo)
 	listHandler := handler.NewListHandler(listRepo, events, boardCopier)
 	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events, mentions, cardCopier)
 	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events, mentions)
@@ -117,6 +118,7 @@ func main() {
 	reminderHandler := handler.NewReminderHandler(reminderRepo)
 	webhookHandler := handler.NewWebhookHandler(webhookRepo, boardRepo)
 	automationHandler := handler.NewAutomationHandler(automationRepo, boardRepo)
+	auditHandler := handler.NewAuditHandler(auditRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -150,6 +152,12 @@ func main() {
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService, apiTokenRepo.LookupByToken))
+
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RequireAdmin(userRepo))
+				r.Get("/admin/audit-log", auditHandler.List)
+				r.Get("/admin/audit-log.csv", auditHandler.ExportCSV)
+			})
 
 			r.Get("/auth/me", authHandler.Me)
 			r.Get("/search", searchHandler.Search)

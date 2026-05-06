@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LayoutDashboard, Star, Plus, Users } from 'lucide-react'
+import { LayoutDashboard, Star, Plus, Users, ShieldCheck } from 'lucide-react'
 import { useTeams } from '@/api/teams'
+import { useMe } from '@/api/users'
 import { useAppStore } from '@/stores/appStore'
 import CreateTeamModal from '../team/CreateTeamModal'
 
@@ -11,6 +12,7 @@ interface SidebarProps {
 
 export default function Sidebar({ onNavigate }: SidebarProps = {}) {
   const { data: teams = [], isLoading } = useTeams()
+  const { data: me } = useMe()
   const activeTeamId = useAppStore((s) => s.activeTeamId)
   const setActiveTeam = useAppStore((s) => s.setActiveTeam)
   const [createOpen, setCreateOpen] = useState(false)
@@ -41,6 +43,17 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
           </Link>
+
+          {me?.role === 'admin' && (
+            <Link
+              to="/admin/audit-log"
+              onClick={onNavigate}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Audit log
+            </Link>
+          )}
 
           <div className="pt-4">
             <div className="mb-2 flex items-center justify-between px-3">

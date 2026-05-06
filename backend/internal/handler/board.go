@@ -17,14 +17,31 @@ type BoardHandler struct {
 	boardRepo *repository.BoardRepo
 	teamRepo  *repository.TeamRepo
 	copier    *service.BoardCopier
+	audit     *repository.AuditRepo
 }
 
 func NewBoardHandler(
 	boardRepo *repository.BoardRepo,
 	teamRepo *repository.TeamRepo,
 	copier *service.BoardCopier,
+	audit *repository.AuditRepo,
 ) *BoardHandler {
-	return &BoardHandler{boardRepo: boardRepo, teamRepo: teamRepo, copier: copier}
+	return &BoardHandler{boardRepo: boardRepo, teamRepo: teamRepo, copier: copier, audit: audit}
+}
+
+func (h *BoardHandler) logAudit(r *http.Request, action, targetID string, meta map[string]interface{}) {
+	if h.audit == nil {
+		return
+	}
+	_ = h.audit.Insert(r.Context(), repository.AuditInsert{
+		ActorUserID: middleware.GetUserID(r.Context()),
+		Action:      action,
+		TargetType:  "board",
+		TargetID:    targetID,
+		IP:          middleware.ClientIP(r),
+		UserAgent:   r.UserAgent(),
+		Metadata:    meta,
+	})
 }
 
 type createBoardRequest struct {
@@ -181,6 +198,9 @@ func (h *BoardHandler) UpdateVisibility(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	h.logAudit(r, "board.visibility_changed", boardID, map[string]interface{}{
+		"visibility": req.Visibility,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"status": "updated", "visibility": req.Visibility})
 }
 
@@ -236,6 +256,9 @@ func (h *BoardHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	h.logAudit(r, "board.member_added", boardID, map[string]interface{}{
+		"user_id": req.UserID, "role": req.Role,
+	})
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "added"})
 }
 
@@ -254,6 +277,9 @@ func (h *BoardHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	h.logAudit(r, "board.member_removed", boardID, map[string]interface{}{
+		"user_id": memberID,
+	})
 	writeJSON(w, http.StatusOK, map[string]string{"status": "removed"})
 }
 
@@ -312,5 +338,6 @@ func (h *BoardHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAudit(r, "board.deleted", boardID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
