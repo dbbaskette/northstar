@@ -112,6 +112,10 @@ func (g *GitHubOAuth) HandleCallback(
 		return nil, nil, "", err
 	}
 
+	if active, err := g.userRepo.IsActive(ctx, uuidString(user.ID)); err != nil || !active {
+		return nil, nil, "", fmt.Errorf("account is deactivated")
+	}
+
 	tokens, err := g.auth.GenerateTokens(ctx, user)
 	if err != nil {
 		return nil, nil, "", err

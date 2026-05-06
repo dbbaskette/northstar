@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -105,7 +106,7 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*models.User, error
 func (r *UserRepo) List(ctx context.Context) ([]models.User, error) {
 	const q = `
 		SELECT id, email, username, display_name, avatar_url, bio, timezone, role, created_at, updated_at
-		FROM users ORDER BY display_name`
+		FROM users WHERE is_active = TRUE ORDER BY display_name`
 
 	rows, err := r.pool.Query(ctx, q)
 	if err != nil {
@@ -125,6 +126,107 @@ func (r *UserRepo) List(ctx context.Context) ([]models.User, error) {
 		users = append(users, u)
 	}
 	return users, rows.Err()
+}
+
+// AdminUser is a fuller listing record exposed only via /admin/users —
+// it includes deactivation state and the SSO-link provider.
+type AdminUser struct {
+	ID               string     `json:"id"`
+	Email            string     `json:"email"`
+	Username         string     `json:"username"`
+	DisplayName      string     `json:"display_name"`
+	Role             string     `json:"role"`
+	IsActive         bool       `json:"is_active"`
+	DeactivatedAt    *time.Time `json:"deactivated_at,omitempty"`
+	ExternalProvider *string    `json:"external_provider,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	LastLoginAt      *time.Time `json:"last_login_at,omitempty"`
+}
+
+func (r *UserRepo) AdminList(ctx context.Context) ([]AdminUser, error) {
+	const q = `
+		SELECT u.id::text, u.email, u.username, u.display_name, u.role, u.is_active,
+		       u.deactivated_at, u.external_provider, u.created_at,
+		       (SELECT MAX(created_at) FROM audit_log a
+		          WHERE a.actor_user_id = u.id AND a.action IN ('auth.login','auth.sso_login'))
+		FROM users u
+		ORDER BY u.is_active DESC, u.display_name`
+
+	rows, err := r.pool.Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []AdminUser{}
+	for rows.Next() {
+		var u AdminUser
+		var deact, last *time.Time
+		var prov *string
+		if err := rows.Scan(
+			&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Role, &u.IsActive,
+			&deact, &prov, &u.CreatedAt, &last,
+		); err != nil {
+			return nil, err
+		}
+		u.DeactivatedAt = deact
+		u.LastLoginAt = last
+		u.ExternalProvider = prov
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+func (r *UserRepo) SetRole(ctx context.Context, userID, role string) error {
+	switch role {
+	case "admin", "member", "viewer":
+	default:
+		return fmt.Errorf("invalid role %q", role)
+	}
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE users SET role = $2 WHERE id = $1`, userID, role)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// SetActive flips the activation bit. When deactivating, also stamps
+// deactivated_at so audit reports can reconstruct timing.
+func (r *UserRepo) SetActive(ctx context.Context, userID string, active bool) error {
+	var q string
+	if active {
+		q = `UPDATE users SET is_active = TRUE, deactivated_at = NULL WHERE id = $1`
+	} else {
+		q = `UPDATE users SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1`
+	}
+	ct, err := r.pool.Exec(ctx, q, userID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// RevokeRefreshTokens wipes a user's refresh tokens — used when an admin
+// forces them off all devices, or as part of deactivation.
+func (r *UserRepo) RevokeRefreshTokens(ctx context.Context, userID string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1`, userID)
+	return err
+}
+
+func (r *UserRepo) IsActive(ctx context.Context, userID string) (bool, error) {
+	var active bool
+	err := r.pool.QueryRow(ctx, `SELECT is_active FROM users WHERE id = $1`, userID).Scan(&active)
+	if err == pgx.ErrNoRows {
+		return false, fmt.Errorf("user not found")
+	}
+	return active, err
 }
 
 type ProfileUpdate struct {

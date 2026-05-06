@@ -124,6 +124,7 @@ func main() {
 	automationHandler := handler.NewAutomationHandler(automationRepo, boardRepo)
 	auditHandler := handler.NewAuditHandler(auditRepo)
 	ssoHandler := handler.NewSSOHandler(githubOAuth, auditRepo)
+	adminUserHandler := handler.NewAdminUserHandler(userRepo, auditRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -165,6 +166,10 @@ func main() {
 				r.Use(middleware.RequireAdmin(userRepo))
 				r.Get("/admin/audit-log", auditHandler.List)
 				r.Get("/admin/audit-log.csv", auditHandler.ExportCSV)
+				r.Get("/admin/users", adminUserHandler.List)
+				r.Patch("/admin/users/{userId}", adminUserHandler.Update)
+				r.Post("/admin/users/{userId}/revoke-sessions", adminUserHandler.RevokeSessions)
+				r.Post("/admin/users/bulk-role", adminUserHandler.BulkRole)
 			})
 
 			r.Get("/auth/me", authHandler.Me)

@@ -72,6 +72,10 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 		return nil, nil, fmt.Errorf("invalid credentials")
 	}
 
+	if active, err := s.userRepo.IsActive(ctx, uuidToString(user.ID)); err != nil || !active {
+		return nil, nil, fmt.Errorf("account is deactivated")
+	}
+
 	tokens, err := s.generateTokens(ctx, user)
 	if err != nil {
 		return nil, nil, err
@@ -101,6 +105,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (string,
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return "", err
+	}
+
+	if active, err := s.userRepo.IsActive(ctx, userID); err != nil || !active {
+		return "", fmt.Errorf("account is deactivated")
 	}
 
 	accessToken, err := s.generateAccessToken(user)

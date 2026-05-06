@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LayoutDashboard, Star, Plus, Users, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Star, Plus, Users, ShieldCheck, UserCog } from 'lucide-react'
 import { useTeams } from '@/api/teams'
 import { useMe } from '@/api/users'
 import { useAppStore } from '@/stores/appStore'
@@ -45,14 +45,24 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
           </Link>
 
           {me?.role === 'admin' && (
-            <Link
-              to="/admin/audit-log"
-              onClick={onNavigate}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Audit log
-            </Link>
+            <>
+              <Link
+                to="/admin/users"
+                onClick={onNavigate}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <UserCog className="h-4 w-4" />
+                Users
+              </Link>
+              <Link
+                to="/admin/audit-log"
+                onClick={onNavigate}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Audit log
+              </Link>
+            </>
           )}
 
           <div className="pt-4">

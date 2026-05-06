@@ -5,6 +5,7 @@ import BoardPage from './pages/BoardPage'
 import ProfilePage from './pages/ProfilePage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
 import AdminAuditLogPage from './pages/AdminAuditLogPage'
+import AdminUsersPage from './pages/AdminUsersPage'
 import AppShell from './components/layout/AppShell'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/boards/:boardId" element={<BoardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/admin/audit-log" element={<AdminAuditLogPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
         </Route>
       </Route>
     </Routes>
