@@ -55,6 +55,26 @@ func main() {
 		logger.Info().Msg("migrations applied")
 	}
 
+	// Bootstrap-admin promotion. Idempotent: if BOOTSTRAP_ADMIN_EMAIL
+	// matches a user, set role='admin' + approve them. Skipped silently
+	// if no user with that email exists (sign up first, then restage).
+	if email := cfg.BootstrapAdminEmail; email != "" {
+		bootstrapCtx, cancelBootstrap := context.WithTimeout(context.Background(), 5*time.Second)
+		ct, err := pool.Exec(bootstrapCtx,
+			`UPDATE users
+			    SET role = 'admin',
+			        approved_at = COALESCE(approved_at, NOW())
+			  WHERE LOWER(email) = LOWER($1)`, email)
+		cancelBootstrap()
+		if err != nil {
+			logger.Warn().Err(err).Str("email", email).Msg("bootstrap admin promotion failed")
+		} else if ct.RowsAffected() > 0 {
+			logger.Info().Str("email", email).Msg("bootstrap admin: user promoted")
+		} else {
+			logger.Info().Str("email", email).Msg("bootstrap admin: no matching user yet (register, then restage)")
+		}
+	}
+
 	userRepo := repository.NewUserRepo(pool)
 	teamRepo := repository.NewTeamRepo(pool)
 	boardRepo := repository.NewBoardRepo(pool)

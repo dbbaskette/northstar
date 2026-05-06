@@ -17,6 +17,12 @@ type Config struct {
 
 	GitHubClientID     string
 	GitHubClientSecret string
+
+	// BootstrapAdminEmail, when set, promotes the matching user to
+	// role='admin' + approved on every backend startup. Idempotent —
+	// once they're admin it's a no-op. Useful for the very first push
+	// to CF when you registered before the migration shipped.
+	BootstrapAdminEmail string
 }
 
 func Load() (*Config, error) {
@@ -58,6 +64,7 @@ func Load() (*Config, error) {
 	cfg.BaseURL = os.Getenv("BASE_URL") // e.g. https://northstar.example.com
 	cfg.GitHubClientID = os.Getenv("GITHUB_CLIENT_ID")
 	cfg.GitHubClientSecret = os.Getenv("GITHUB_CLIENT_SECRET")
+	cfg.BootstrapAdminEmail = os.Getenv("BOOTSTRAP_ADMIN_EMAIL")
 
 	return cfg, nil
 }

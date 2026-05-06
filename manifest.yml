@@ -31,3 +31,8 @@ applications:
   #                           OAuth callback URL is right.
   #   GITHUB_CLIENT_ID      — turns on the "Sign in with GitHub" button.
   #   GITHUB_CLIENT_SECRET
+  #   BOOTSTRAP_ADMIN_EMAIL — promotes the matching user to admin on every
+  #                           startup. Use it to claim the first admin
+  #                           account when you registered before the
+  #                           approval feature shipped. Idempotent; safe
+  #                           to leave set.

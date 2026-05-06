@@ -52,6 +52,19 @@ cf set-env northstar GITHUB_CLIENT_SECRET <secret>
 cf restage northstar
 ```
 
+Claiming the first admin account (one-time): the very first sign-up is
+promoted to admin automatically. If you already registered before that
+rule shipped — or you want to point a deployed instance at a specific
+admin — set:
+
+```sh
+cf set-env northstar BOOTSTRAP_ADMIN_EMAIL you@example.com
+cf restage northstar
+```
+
+On every startup, the backend promotes the matching email to
+`role='admin'` and approves them. Idempotent and safe to leave set.
+
 ## Architecture
 
 - **Single binary deploy**: in production, the React build is embedded into the Go binary via `embed.FS`. One artifact, one process, one health check.
