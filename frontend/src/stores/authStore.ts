@@ -5,7 +5,7 @@ interface AuthState {
   accessToken: string | null
   user: { id: string; email: string; username: string; displayName: string; role: string } | null
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string, totpCode?: string) => Promise<void | { twoFactorRequired: true }>
   register: (email: string, username: string, password: string, displayName: string) => Promise<void>
   refresh: () => Promise<void>
   logout: () => void
@@ -22,8 +22,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setAuth: (token, user) => set({ accessToken: token, user, isAuthenticated: true }),
 
-  login: async (email, password) => {
-    const res = await axios.post('/api/v1/auth/login', { email, password })
+  login: async (email, password, totpCode) => {
+    const res = await axios.post('/api/v1/auth/login', {
+      email,
+      password,
+      totp_code: totpCode,
+    })
+    if (res.data.two_factor_required) {
+      return { twoFactorRequired: true } as const
+    }
     set({
       accessToken: res.data.access_token,
       user: res.data.user,

@@ -5,12 +5,14 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/dbbaskette/northstar/internal/models"
@@ -18,9 +20,11 @@ import (
 )
 
 type AuthService struct {
-	userRepo  *repository.UserRepo
-	pool      *pgxpool.Pool
-	jwtSecret []byte
+	userRepo    *repository.UserRepo
+	sessionRepo *repository.SessionRepo
+	twofaRepo   *repository.TwoFARepo
+	pool        *pgxpool.Pool
+	jwtSecret   []byte
 }
 
 type TokenPair struct {
@@ -35,6 +39,18 @@ func NewAuthService(userRepo *repository.UserRepo, pool *pgxpool.Pool, jwtSecret
 		jwtSecret: []byte(jwtSecret),
 	}
 }
+
+// SetSessions wires optional session + 2FA repos in a second step so
+// older callers (tests, fixtures) don't need to thread them through
+// the constructor.
+func (s *AuthService) SetSessions(sessions *repository.SessionRepo, twofa *repository.TwoFARepo) {
+	s.sessionRepo = sessions
+	s.twofaRepo = twofa
+}
+
+// ErrTwoFARequired signals that the caller must collect a TOTP code
+// from the user and retry Login with it.
+var ErrTwoFARequired = errors.New("2fa_required")
 
 func (s *AuthService) Register(ctx context.Context, email, username, password, displayName string) (*models.User, *TokenPair, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -62,13 +78,23 @@ func (s *AuthService) Register(ctx context.Context, email, username, password, d
 	return user, tokens, nil
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (*models.User, *TokenPair, error) {
-	user, err := s.userRepo.FindByEmail(ctx, email)
+// LoginInput bundles the optional bits the auth handler can pass —
+// keeps Login's signature stable as new factors get added.
+type LoginInput struct {
+	Email    string
+	Password string
+	TOTPCode string
+	IP       string
+	UserAgent string
+}
+
+func (s *AuthService) Login(ctx context.Context, in LoginInput) (*models.User, *TokenPair, error) {
+	user, err := s.userRepo.FindByEmail(ctx, in.Email)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid credentials")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(in.Password)); err != nil {
 		return nil, nil, fmt.Errorf("invalid credentials")
 	}
 
@@ -76,7 +102,19 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 		return nil, nil, fmt.Errorf("account is deactivated")
 	}
 
-	tokens, err := s.generateTokens(ctx, user)
+	if s.twofaRepo != nil {
+		row, _ := s.twofaRepo.Get(ctx, uuidToString(user.ID))
+		if row != nil && row.EnabledAt != nil {
+			if in.TOTPCode == "" {
+				return nil, nil, ErrTwoFARequired
+			}
+			if !totp.Validate(in.TOTPCode, row.TOTPSecret) {
+				return nil, nil, fmt.Errorf("invalid 2fa code")
+			}
+		}
+	}
+
+	tokens, err := s.issueSession(ctx, user, in.IP, in.UserAgent)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -111,7 +149,20 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (string,
 		return "", fmt.Errorf("account is deactivated")
 	}
 
-	accessToken, err := s.generateAccessToken(user)
+	// Refresh mints a fresh session row with its own jti so revoking
+	// the original session also kills any newer access tokens spawned
+	// from it. Tighter than reusing the old jti and matches the
+	// "revoke immediately invalidates" expectation.
+	jti, err := newJTI()
+	if err != nil {
+		return "", err
+	}
+	if s.sessionRepo != nil {
+		if err := s.sessionRepo.Create(ctx, userID, jti, "", ""); err != nil {
+			return "", err
+		}
+	}
+	accessToken, err := s.generateAccessToken(user, jti)
 	if err != nil {
 		return "", err
 	}
@@ -140,31 +191,64 @@ func (s *AuthService) ValidateAccessToken(tokenString string) (string, error) {
 		return "", fmt.Errorf("invalid token subject")
 	}
 
+	// Reject tokens whose session row is gone or revoked. JTI was
+	// added to the claims with the sessions feature; older tokens
+	// (without jti) keep working until they expire — 15-minute TTL
+	// makes that window short.
+	if s.sessionRepo != nil {
+		if jti, _ := claims["jti"].(string); jti != "" {
+			active, err := s.sessionRepo.IsActive(context.Background(), jti)
+			if err != nil || !active {
+				return "", fmt.Errorf("session revoked")
+			}
+		}
+	}
+
 	return userID, nil
 }
 
 func (s *AuthService) generateTokens(ctx context.Context, user *models.User) (*TokenPair, error) {
-	accessToken, err := s.generateAccessToken(user)
+	return s.issueSession(ctx, user, "", "")
+}
+
+// issueSession is the shared bottom-half of Login + SSO — mints a
+// JTI, persists a session row, and returns the access + refresh
+// pair carrying that JTI.
+func (s *AuthService) issueSession(ctx context.Context, user *models.User, ip, ua string) (*TokenPair, error) {
+	jti, err := newJTI()
 	if err != nil {
 		return nil, err
 	}
-
+	if s.sessionRepo != nil {
+		if err := s.sessionRepo.Create(ctx, uuidToString(user.ID), jti, ip, ua); err != nil {
+			return nil, fmt.Errorf("creating session: %w", err)
+		}
+	}
+	accessToken, err := s.generateAccessToken(user, jti)
+	if err != nil {
+		return nil, err
+	}
 	refreshToken, err := s.generateRefreshToken(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-
-	return &TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
+	return &TokenPair{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
-func (s *AuthService) generateAccessToken(user *models.User) (string, error) {
+func newJTI() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func (s *AuthService) generateAccessToken(user *models.User, jti string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   uuidToString(user.ID),
 		"email": user.Email,
 		"role":  user.Role,
+		"jti":   jti,
 		"exp":   time.Now().Add(15 * time.Minute).Unix(),
 		"iat":   time.Now().Unix(),
 	}

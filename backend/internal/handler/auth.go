@@ -41,6 +41,7 @@ type registerRequest struct {
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	TOTPCode string `json:"totp_code,omitempty"`
 }
 
 type refreshRequest struct {
@@ -91,8 +92,18 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, tokens, err := h.authService.Login(r.Context(), req.Email, req.Password)
+	user, tokens, err := h.authService.Login(r.Context(), service.LoginInput{
+		Email:     req.Email,
+		Password:  req.Password,
+		TOTPCode:  req.TOTPCode,
+		IP:        middleware.ClientIP(r),
+		UserAgent: r.UserAgent(),
+	})
 	if err != nil {
+		if err == service.ErrTwoFARequired {
+			writeJSON(w, http.StatusOK, map[string]interface{}{"two_factor_required": true})
+			return
+		}
 		h.logAudit(r, "", "auth.login_failed", map[string]interface{}{"email": req.Email})
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return

@@ -78,6 +78,8 @@ func main() {
 	reportRepo := repository.NewReportRepo(pool)
 	voteRepo := repository.NewVoteRepo(pool)
 	cardLinkRepo := repository.NewCardLinkRepo(pool)
+	sessionRepo := repository.NewSessionRepo(pool)
+	twofaRepo := repository.NewTwoFARepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -97,6 +99,7 @@ func main() {
 	cardCopier := service.NewCardCopier(pool)
 	boardCopier := service.NewBoardCopier(pool)
 	authService := service.NewAuthService(userRepo, pool, cfg.JWTSecret)
+	authService.SetSessions(sessionRepo, twofaRepo)
 	githubOAuth := service.NewGitHubOAuth(
 		cfg.GitHubClientID, cfg.GitHubClientSecret, cfg.BaseURL, cfg.JWTSecret,
 		userRepo, authService,
@@ -131,6 +134,7 @@ func main() {
 	reportHandler := handler.NewReportHandler(reportRepo, boardRepo)
 	voteHandler := handler.NewVoteHandler(voteRepo)
 	cardLinkHandler := handler.NewCardLinkHandler(cardLinkRepo)
+	securityHandler := handler.NewSecurityHandler(sessionRepo, twofaRepo, userRepo, cfg.JWTSecret)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -179,6 +183,18 @@ func main() {
 			})
 
 			r.Get("/auth/me", authHandler.Me)
+
+			r.Route("/me/sessions", func(r chi.Router) {
+				r.Get("/", securityHandler.ListSessions)
+				r.Post("/{sessionId}/revoke", securityHandler.RevokeSession)
+			})
+			r.Route("/me/2fa", func(r chi.Router) {
+				r.Get("/", securityHandler.TwoFAStatus)
+				r.Post("/setup", securityHandler.TwoFASetup)
+				r.Post("/verify", securityHandler.TwoFAVerify)
+				r.Post("/disable", securityHandler.TwoFADisable)
+			})
+
 			r.Get("/search", searchHandler.Search)
 			r.Get("/templates", templateHandler.ListTemplates)
 

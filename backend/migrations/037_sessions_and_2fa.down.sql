@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS user_2fa;
+DROP TABLE IF EXISTS sessions;

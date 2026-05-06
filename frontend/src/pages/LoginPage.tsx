@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [providers, setProviders] = useState<SSOProviders>({})
+  const [needTOTP, setNeedTOTP] = useState(false)
+  const [totpCode, setTotpCode] = useState('')
   const login = useAuthStore((s) => s.login)
   const register = useAuthStore((s) => s.register)
   const hydrate = useAuthStore((s) => s.hydrateFromAccessToken)
@@ -65,7 +67,13 @@ export default function LoginPage() {
     setLoading(true)
     try {
       if (mode === 'login') {
-        await login(email, password)
+        const result = await login(email, password, totpCode || undefined)
+        if (result && 'twoFactorRequired' in result) {
+          setNeedTOTP(true)
+          setError('Enter the code from your authenticator app to continue.')
+          setLoading(false)
+          return
+        }
       } else {
         if (password.length < 8) {
           setError('Password must be at least 8 characters')
@@ -202,6 +210,25 @@ export default function LoginPage() {
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </div>
+
+          {mode === 'login' && needTOTP && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Authenticator code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                autoFocus
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-center font-mono text-lg tracking-widest focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                required
+              />
+            </div>
+          )}
 
           <button
             type="submit"
