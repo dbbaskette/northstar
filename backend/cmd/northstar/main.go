@@ -71,6 +71,7 @@ func main() {
 	apiTokenRepo := repository.NewAPITokenRepo(pool)
 	customFieldRepo := repository.NewCustomFieldRepo(pool)
 	watcherRepo := repository.NewWatcherRepo(pool)
+	reminderRepo := repository.NewReminderRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -93,7 +94,7 @@ func main() {
 	listHandler := handler.NewListHandler(listRepo, events, boardCopier)
 	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events, mentions, cardCopier)
 	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events, mentions)
-	labelHandler := handler.NewLabelHandler(labelRepo, cardRepo, listRepo, events)
+	labelHandler := handler.NewLabelHandler(labelRepo, cardRepo, listRepo, reminderRepo, events)
 	activityHandler := handler.NewActivityHandler(activityRepo)
 	wsHandler := handler.NewWSHandler(hub, authService)
 	checklistHandler := handler.NewChecklistHandler(checklistRepo, cardRepo, listRepo, events)
@@ -107,6 +108,10 @@ func main() {
 	customFieldHandler := handler.NewCustomFieldHandler(customFieldRepo, boardRepo)
 	templateHandler := handler.NewTemplateHandler(pool, boardRepo, teamRepo, boardCopier)
 	watcherHandler := handler.NewWatcherHandler(watcherRepo)
+	reminderHandler := handler.NewReminderHandler(reminderRepo)
+
+	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
+	go reminderWorker.Run(context.Background())
 
 	r := chi.NewRouter()
 
@@ -236,8 +241,12 @@ func main() {
 				r.Post("/comments", commentHandler.Create)
 				r.Post("/checklists", checklistHandler.Create)
 				r.Post("/attachments", attachmentHandler.Upload)
+				r.Get("/reminders", reminderHandler.List)
+				r.Post("/reminders", reminderHandler.Create)
 				r.Put("/custom-fields/{fieldId}", customFieldHandler.SetCardValue)
 			})
+
+			r.Delete("/reminders/{reminderId}", reminderHandler.Delete)
 
 			r.Route("/custom-fields/{fieldId}", func(r chi.Router) {
 				r.Patch("/", customFieldHandler.Update)

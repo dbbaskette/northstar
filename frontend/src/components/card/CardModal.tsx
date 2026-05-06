@@ -31,6 +31,7 @@ import CardAttachments from './CardAttachments'
 import CardCoverPicker from './CardCoverPicker'
 import CardCopyMoveModal from './CardCopyMoveModal'
 import CardCustomFields from './CardCustomFields'
+import CardReminders from './CardReminders'
 import Markdown from '../ui/Markdown'
 import Avatar from '../ui/Avatar'
 import WatchToggle from '../ui/WatchToggle'
@@ -404,6 +405,9 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
 
             {/* Custom fields */}
             <CardCustomFields boardId={board.id} cardId={card.id} card={card} />
+
+            {/* Reminders */}
+            <CardReminders cardId={card.id} />
 
             {/* Add label */}
             <div>

@@ -14,23 +14,26 @@ import (
 )
 
 type LabelHandler struct {
-	labelRepo *repository.LabelRepo
-	cardRepo  *repository.CardRepo
-	listRepo  *repository.ListRepo
-	events    *service.Events
+	labelRepo    *repository.LabelRepo
+	cardRepo     *repository.CardRepo
+	listRepo     *repository.ListRepo
+	reminderRepo *repository.ReminderRepo
+	events       *service.Events
 }
 
 func NewLabelHandler(
 	labelRepo *repository.LabelRepo,
 	cardRepo *repository.CardRepo,
 	listRepo *repository.ListRepo,
+	reminderRepo *repository.ReminderRepo,
 	events *service.Events,
 ) *LabelHandler {
 	return &LabelHandler{
-		labelRepo: labelRepo,
-		cardRepo:  cardRepo,
-		listRepo:  listRepo,
-		events:    events,
+		labelRepo:    labelRepo,
+		cardRepo:     cardRepo,
+		listRepo:     listRepo,
+		reminderRepo: reminderRepo,
+		events:       events,
 	}
 }
 
@@ -188,6 +191,13 @@ func (h *LabelHandler) AddAssignee(w http.ResponseWriter, r *http.Request) {
 		h.events.NotifyCardWatchers(r.Context(), cardID, boardID, userID, "card.assignee_added", payload)
 		// Auto-watch when added as assignee
 		h.events.AutoWatchCard(r.Context(), req.UserID, cardID)
+		// Auto-create a 1-day-before reminder for the new assignee
+		// (only if the card has a due date set)
+		if h.reminderRepo != nil {
+			if card, err := h.cardRepo.FindByID(r.Context(), cardID); err == nil && card.DueDate.Valid {
+				_ = h.reminderRepo.Create(r.Context(), cardID, req.UserID, 24*60)
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "assignee added"})
