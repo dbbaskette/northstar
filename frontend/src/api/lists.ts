@@ -1,0 +1,52 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import api from './client'
+import type { BoardList } from './boards'
+
+export function useCreateList(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { name: string }): Promise<BoardList> => {
+      const res = await api.post(`/boards/${boardId}/lists`, input)
+      return res.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+}
+
+export function useUpdateList(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { listId: string; name: string }) => {
+      await api.patch(`/lists/${input.listId}`, { name: input.name })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+}
+
+export function useArchiveList(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (listId: string) => {
+      await api.delete(`/lists/${listId}`)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+}
+
+export function useReorderList(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { listId: string; position: number }) => {
+      await api.patch(`/lists/${input.listId}/reorder`, { position: input.position })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+}

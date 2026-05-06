@@ -1,0 +1,16 @@
+---
+applications:
+- name: northstar
+  memory: 256M
+  disk_quota: 128M
+  instances: 1
+  buildpacks:
+  - binary_buildpack
+  command: ./northstar-linux-amd64
+  health-check-type: http
+  health-check-http-endpoint: /health
+  timeout: 60
+  env:
+    LOG_LEVEL: info
+  services:
+  - northstar-db
