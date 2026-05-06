@@ -67,6 +67,7 @@ func main() {
 	attachmentRepo := repository.NewAttachmentRepo(pool)
 	searchRepo := repository.NewSearchRepo(pool)
 	inviteRepo := repository.NewInviteRepo(pool)
+	notifRepo := repository.NewNotificationRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -77,7 +78,7 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
-	events := service.NewEvents(activityRepo, hub)
+	events := service.NewEvents(activityRepo, notifRepo, hub)
 	authService := service.NewAuthService(userRepo, pool, cfg.JWTSecret)
 
 	authHandler := handler.NewAuthHandler(authService)
@@ -95,6 +96,7 @@ func main() {
 	searchHandler := handler.NewSearchHandler(searchRepo)
 	userHandler := handler.NewUserHandler(userRepo, store)
 	inviteHandler := handler.NewInviteHandler(inviteRepo, boardRepo, teamRepo)
+	notifHandler := handler.NewNotificationHandler(notifRepo)
 
 	r := chi.NewRouter()
 
@@ -128,6 +130,13 @@ func main() {
 
 			r.Get("/auth/me", authHandler.Me)
 			r.Get("/search", searchHandler.Search)
+
+			r.Route("/notifications", func(r chi.Router) {
+				r.Get("/", notifHandler.List)
+				r.Get("/count", notifHandler.Count)
+				r.Post("/read-all", notifHandler.MarkAllRead)
+				r.Post("/{notificationId}/read", notifHandler.MarkRead)
+			})
 
 			r.Route("/users", func(r chi.Router) {
 				r.Get("/", userHandler.List)

@@ -67,12 +67,23 @@ func (h *CommentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if card, err := h.cardRepo.FindByID(r.Context(), cardID); err == nil {
+	if card, err := h.cardRepo.GetCardWithDetails(r.Context(), cardID); err == nil {
 		if list, err := h.listRepo.FindByID(r.Context(), uuidStr(card.ListID)); err == nil {
-			h.events.Emit(r.Context(), uuidStr(list.BoardID), userID, "comment.added", "comment", uuidStr(comment.ID), map[string]interface{}{
+			boardID := uuidStr(list.BoardID)
+			payload := map[string]interface{}{
 				"card_id":    cardID,
+				"card_title": card.Title,
 				"comment_id": uuidStr(comment.ID),
-			})
+				"body":       comment.Body,
+			}
+			h.events.Emit(r.Context(), boardID, userID, "comment.added", "comment", uuidStr(comment.ID), payload)
+
+			// Notify all card assignees about the new comment
+			recipients := make([]string, 0, len(card.Assignees))
+			for _, a := range card.Assignees {
+				recipients = append(recipients, uuidStr(a.ID))
+			}
+			h.events.Notify(r.Context(), recipients, userID, "comment.added", cardID, boardID, payload)
 		}
 	}
 

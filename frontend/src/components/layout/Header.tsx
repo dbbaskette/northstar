@@ -6,6 +6,7 @@ import { useMe } from '@/api/users'
 import Avatar from '../ui/Avatar'
 import SearchModal from '../search/SearchModal'
 import ThemeToggle from './ThemeToggle'
+import NotificationsBell from './NotificationsBell'
 
 export default function Header() {
   const authUser = useAuthStore((s) => s.user)
@@ -50,6 +51,7 @@ export default function Header() {
         </button>
 
         <div className="flex items-center gap-3">
+          <NotificationsBell />
           <ThemeToggle />
           {user && (
             <Link

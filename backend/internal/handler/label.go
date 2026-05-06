@@ -178,10 +178,13 @@ func (h *LabelHandler) AddAssignee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if boardID := h.cardBoardID(r, cardID); boardID != "" {
-		h.events.Emit(r.Context(), boardID, userID, "assignee.added", "card", cardID, map[string]interface{}{
+		payload := map[string]interface{}{
 			"card_id": cardID,
 			"user_id": req.UserID,
-		})
+		}
+		h.events.Emit(r.Context(), boardID, userID, "assignee.added", "card", cardID, payload)
+		// Notify the new assignee
+		h.events.Notify(r.Context(), []string{req.UserID}, userID, "card.assigned", cardID, boardID, payload)
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "assignee added"})
