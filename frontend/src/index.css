@@ -8,6 +8,37 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Visible keyboard focus across the app. Mouse interactions keep the
+   default browser behaviour (no ring) — only :focus-visible triggers. */
+*:focus {
+  outline: none;
+}
+*:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+html.dark *:focus-visible {
+  outline-color: #60a5fa;
+}
+
+/* Skip-link sits offscreen until focused via keyboard. */
+.skip-to-main {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background-color: #1f2937;
+  color: #ffffff;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+}
+.skip-to-main:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}
+
 /* Markdown rendering styles (used by <Markdown /> inside cards & comments). */
 .prose-northstar {
   font-size: 0.875rem;

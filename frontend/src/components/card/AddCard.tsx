@@ -50,6 +50,7 @@ export default function AddCard({ boardId, listId }: Props) {
             handleSubmit(e)
           }
         }}
+        aria-label="Card title"
         placeholder="Enter a title for this card..."
         className="w-full resize-none rounded-lg border border-gray-300 bg-white p-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
         autoFocus

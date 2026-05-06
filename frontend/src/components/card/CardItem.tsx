@@ -26,11 +26,31 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
   const coverSize = cardCoverSize(card)
   const isOverdue = dueDate && !completedAt && dueDate.getTime() < Date.now()
 
+  const ariaLabel = (() => {
+    const bits: string[] = [`Card: ${card.title}`]
+    if (priority) bits.push(`priority ${PRIORITY_LABELS[priority]}`)
+    if (dueDate)
+      bits.push(`${isOverdue ? 'overdue, due' : 'due'} ${dueDate.toLocaleDateString()}`)
+    if (completedAt) bits.push('completed')
+    return bits.join(', ')
+  })()
+
+  const handleKeyActivate = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClick()
+    }
+  }
+
   // Full cover: image fills the whole card thumbnail with title overlaid.
   if (coverImage && coverSize === 'full') {
     return (
       <div
         onClick={onClick}
+        onKeyDown={handleKeyActivate}
+        role="button"
+        tabIndex={0}
+        aria-label={ariaLabel}
         className={`group cursor-pointer overflow-hidden rounded-lg border-l-4 shadow-sm transition-shadow hover:shadow-md ${
           isDragging ? 'opacity-50' : ''
         } ${completedAt ? 'opacity-70' : ''}`}
@@ -54,6 +74,10 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
   return (
     <div
       onClick={onClick}
+      onKeyDown={handleKeyActivate}
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
       className={`group cursor-pointer overflow-hidden rounded-lg border-l-4 bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800 ${
         isDragging ? 'opacity-50' : ''
       } ${completedAt ? 'opacity-70' : ''}`}

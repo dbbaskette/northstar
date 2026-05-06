@@ -209,6 +209,7 @@ export default function BoardFilters({ board, onChange }: Props) {
                   type="text"
                   value={filter.text}
                   onChange={(e) => updateParam('text', e.target.value)}
+                  aria-label="Search card titles in this board"
                   placeholder="Search in this board..."
                   className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />

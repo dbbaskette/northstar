@@ -194,6 +194,9 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-0 sm:p-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Card details"
     >
       <div
         className="min-h-screen w-full max-w-2xl bg-white shadow-xl sm:my-8 sm:min-h-0 sm:rounded-xl dark:bg-gray-800"
@@ -253,7 +256,11 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
           </div>
           <div className="ml-4 flex items-center gap-2">
             <WatchToggle targetType="card" targetID={cardId} label />
-            <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button
+              onClick={onClose}
+              aria-label="Close card"
+              className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -361,6 +368,7 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={6}
+                    aria-label="Card description (Markdown supported)"
                     placeholder="Markdown supported: **bold**, *italic*, `code`, [link](url), - lists"
                     className="w-full rounded-lg border border-gray-300 p-2 font-mono text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     autoFocus
@@ -455,6 +463,7 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                         type="text"
                         value={newLabelName}
                         onChange={(e) => setNewLabelName(e.target.value)}
+                        aria-label="New label name"
                         placeholder="Label name"
                         className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                       />
@@ -462,6 +471,8 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                         <button
                           key={c}
                           onClick={() => setNewLabelColor(c)}
+                          aria-label={`Choose label color ${c}`}
+                          aria-pressed={newLabelColor === c}
                           className={`h-6 w-6 rounded ${
                             newLabelColor === c ? 'ring-2 ring-gray-700 ring-offset-1' : ''
                           }`}
@@ -492,6 +503,7 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                   type="text"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  aria-label="Comment text"
                   placeholder="Write a comment..."
                   className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />

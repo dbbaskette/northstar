@@ -15,6 +15,9 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
       {/* Sidebar visible at md+, hidden + slide-in drawer on smaller */}
       {sidebarOpen && (
         <div
@@ -31,7 +34,7 @@ export default function AppShell() {
       </div>
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+        <main id="main-content" className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
           <Outlet />
         </main>
       </div>
