@@ -73,6 +73,7 @@ func main() {
 	watcherRepo := repository.NewWatcherRepo(pool)
 	reminderRepo := repository.NewReminderRepo(pool)
 	webhookRepo := repository.NewWebhookRepo(pool)
+	automationRepo := repository.NewAutomationRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -85,7 +86,9 @@ func main() {
 
 	webhookDispatcher := service.NewWebhookDispatcher(webhookRepo)
 	go webhookDispatcher.Run(context.Background(), 10*time.Second)
-	events := service.NewEvents(activityRepo, notifRepo, watcherRepo, hub, webhookDispatcher)
+	events := service.NewEvents(activityRepo, notifRepo, watcherRepo, hub, webhookDispatcher, nil)
+	automationEngine := service.NewAutomationEngine(pool, automationRepo, cardRepo, labelRepo)
+	events.SetAutomation(automationEngine)
 	mentions := service.NewMentions(pool)
 	cardCopier := service.NewCardCopier(pool)
 	boardCopier := service.NewBoardCopier(pool)
@@ -113,6 +116,7 @@ func main() {
 	watcherHandler := handler.NewWatcherHandler(watcherRepo)
 	reminderHandler := handler.NewReminderHandler(reminderRepo)
 	webhookHandler := handler.NewWebhookHandler(webhookRepo, boardRepo)
+	automationHandler := handler.NewAutomationHandler(automationRepo, boardRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -214,6 +218,8 @@ func main() {
 				r.Post("/custom-fields", customFieldHandler.Create)
 				r.Get("/webhooks", webhookHandler.List)
 				r.Post("/webhooks", webhookHandler.Create)
+				r.Get("/automations", automationHandler.List)
+				r.Post("/automations", automationHandler.Create)
 				r.Get("/activity", activityHandler.ListByBoard)
 				r.Get("/archived", archiveHandler.ListArchived)
 			})
@@ -257,6 +263,12 @@ func main() {
 			r.Route("/webhooks/{webhookId}", func(r chi.Router) {
 				r.Delete("/", webhookHandler.Delete)
 				r.Get("/deliveries", webhookHandler.Deliveries)
+			})
+
+			r.Route("/automations/{ruleId}", func(r chi.Router) {
+				r.Patch("/", automationHandler.Update)
+				r.Delete("/", automationHandler.Delete)
+				r.Get("/runs", automationHandler.Runs)
 			})
 
 			r.Route("/custom-fields/{fieldId}", func(r chi.Router) {

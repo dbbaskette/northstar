@@ -16,6 +16,7 @@ type Events struct {
 	watcherRepo  *repository.WatcherRepo
 	hub          *ws.Hub
 	dispatcher   *WebhookDispatcher
+	automation   *AutomationEngine
 }
 
 func NewEvents(
@@ -24,6 +25,7 @@ func NewEvents(
 	watcherRepo *repository.WatcherRepo,
 	hub *ws.Hub,
 	dispatcher *WebhookDispatcher,
+	automation *AutomationEngine,
 ) *Events {
 	return &Events{
 		activityRepo: activityRepo,
@@ -31,7 +33,18 @@ func NewEvents(
 		watcherRepo:  watcherRepo,
 		hub:          hub,
 		dispatcher:   dispatcher,
+		automation:   automation,
 	}
+}
+
+// SetAutomation lets the engine be wired in after Events is built — it
+// avoids a circular dependency where AutomationEngine needs Events but
+// Events needs the engine to fan out.
+func (e *Events) SetAutomation(a *AutomationEngine) {
+	if e == nil {
+		return
+	}
+	e.automation = a
 }
 
 // Emit logs an activity and broadcasts a WebSocket event for the given board.
@@ -51,6 +64,9 @@ func (e *Events) Emit(
 	e.hub.Broadcast(boardID, userID, action, payload)
 	if e.dispatcher != nil {
 		e.dispatcher.Enqueue(ctx, boardID, action, payload)
+	}
+	if e.automation != nil {
+		e.automation.Handle(ctx, boardID, action, payload)
 	}
 }
 

@@ -122,6 +122,22 @@ func (r *CardRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// SetCompleted toggles the completed_at flag without touching other fields.
+func (r *CardRepo) SetCompleted(ctx context.Context, id string, completed bool) error {
+	const q = `
+		UPDATE cards
+		SET completed_at = CASE WHEN $2 THEN NOW() ELSE NULL END
+		WHERE id = $1 AND deleted_at IS NULL`
+	ct, err := r.pool.Exec(ctx, q, id, completed)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("card not found")
+	}
+	return nil
+}
+
 type CoverUpdate struct {
 	AttachmentID *string // nil = no change, "" = clear
 	Color        *string

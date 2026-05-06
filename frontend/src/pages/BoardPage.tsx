@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid } from 'lucide-react'
+import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, Zap } from 'lucide-react'
 import { useBoard, useCopyBoard } from '@/api/boards'
 import BoardView from '@/components/board/BoardView'
 import BoardCalendarView from '@/components/board/BoardCalendarView'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import BoardSharingModal from '@/components/board/BoardSharingModal'
+import AutomationsModal from '@/components/board/AutomationsModal'
 import WatchToggle from '@/components/ui/WatchToggle'
 import CardModal from '@/components/card/CardModal'
 import ActivityFeed from '@/components/activity/ActivityFeed'
@@ -19,6 +20,7 @@ export default function BoardPage() {
   const [showActivity, setShowActivity] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showShare, setShowShare] = useState(false)
+  const [showAutomation, setShowAutomation] = useState(false)
   const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
   const [view, setView] = useState<'board' | 'calendar'>('board')
 
@@ -114,6 +116,14 @@ export default function BoardPage() {
             className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
           />
           <button
+            onClick={() => setShowAutomation(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
+            title="Automation rules"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            Automation
+          </button>
+          <button
             onClick={() => setShowShare(true)}
             className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
             title="Share board"
@@ -168,6 +178,11 @@ export default function BoardPage() {
         open={showShare}
         board={board}
         onClose={() => setShowShare(false)}
+      />
+      <AutomationsModal
+        open={showAutomation}
+        board={board}
+        onClose={() => setShowAutomation(false)}
       />
     </div>
   )
