@@ -196,6 +196,28 @@ func (r *BoardRepo) GetFullBoard(ctx context.Context, id string) (*models.Board,
 				return nil, err
 			}
 
+			// Fetch labels per card for the board view
+			labelRows, err := r.pool.Query(ctx, `
+				SELECT cl.card_id::text, l.id, l.board_id, l.name, l.color, l.created_at
+				FROM card_labels cl
+				JOIN labels l ON l.id = cl.label_id
+				WHERE cl.card_id = ANY($1)
+				ORDER BY l.name`, allCardIDs)
+			if err != nil {
+				return nil, err
+			}
+			labelsByCard := make(map[string][]models.Label)
+			for labelRows.Next() {
+				var cardIDStr string
+				var lab models.Label
+				if err := labelRows.Scan(&cardIDStr, &lab.ID, &lab.BoardID, &lab.Name, &lab.Color, &lab.CreatedAt); err != nil {
+					labelRows.Close()
+					return nil, err
+				}
+				labelsByCard[cardIDStr] = append(labelsByCard[cardIDStr], lab)
+			}
+			labelRows.Close()
+
 			for i := range board.Lists {
 				for j := range board.Lists[i].Cards {
 					c := &board.Lists[i].Cards[j]
@@ -207,6 +229,9 @@ func (r *BoardRepo) GetFullBoard(ctx context.Context, id string) (*models.Board,
 					}
 					if n, ok := attachCounts[cardID]; ok {
 						c.AttachmentCount = n
+					}
+					if labs, ok := labelsByCard[cardID]; ok {
+						c.Labels = labs
 					}
 				}
 			}

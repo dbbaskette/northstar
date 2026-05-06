@@ -40,6 +40,7 @@ export interface BoardCard {
   checklist_total?: number
   checklist_done?: number
   attachment_count?: number
+  labels?: BoardLabel[]
 }
 
 export interface BoardLabel {

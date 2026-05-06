@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft, Archive } from 'lucide-react'
 import { useBoard } from '@/api/boards'
 import BoardView from '@/components/board/BoardView'
+import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import CardModal from '@/components/card/CardModal'
 import ActivityFeed from '@/components/activity/ActivityFeed'
 import ArchivedPanel from '@/components/board/ArchivedPanel'
@@ -14,6 +15,7 @@ export default function BoardPage() {
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
   const [showActivity, setShowActivity] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
 
   useBoardWebSocket(boardId || null)
 
@@ -53,6 +55,7 @@ export default function BoardPage() {
           <h2 className="text-lg font-semibold">{board.name}</h2>
         </div>
         <div className="flex items-center gap-2">
+          <BoardFilters board={board} onChange={setFilter} />
           <button
             onClick={() => setShowArchived(true)}
             className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
@@ -72,7 +75,7 @@ export default function BoardPage() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-hidden">
-          <BoardView board={board} onCardClick={setActiveCardId} />
+          <BoardView board={board} onCardClick={setActiveCardId} filter={filter} />
         </div>
         {showActivity && (
           <aside className="w-80 overflow-y-auto border-l border-black/10 bg-white/95 backdrop-blur">

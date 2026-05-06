@@ -24,13 +24,15 @@ import { calculatePosition } from '@/lib/utils'
 import SortableListColumn from './SortableListColumn'
 import CardItem from '../card/CardItem'
 import AddList from '../list/AddList'
+import { applyFilter, type FilterState } from './BoardFilters'
 
 interface Props {
   board: Board
   onCardClick: (cardId: string) => void
+  filter: FilterState
 }
 
-export default function BoardView({ board, onCardClick }: Props) {
+export default function BoardView({ board, onCardClick, filter }: Props) {
   const qc = useQueryClient()
   const [lists, setLists] = useState<BoardList[]>(board.lists || [])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -42,6 +44,24 @@ export default function BoardView({ board, onCardClick }: Props) {
   useEffect(() => {
     setLists(board.lists || [])
   }, [board.lists])
+
+  const isFiltering =
+    filter.priorities.length > 0 ||
+    filter.labelIds.length > 0 ||
+    filter.completion !== 'all' ||
+    filter.due !== 'any' ||
+    filter.text !== ''
+
+  // When filtering is active, hide non-matching cards. Drag-and-drop is
+  // disabled visually since the displayed cards don't represent the full
+  // ordering — but the source of truth (lists state) stays intact.
+  const displayLists = useMemo(() => {
+    if (!isFiltering) return lists
+    return lists.map((l) => ({
+      ...l,
+      cards: applyFilter(l.cards || [], filter),
+    }))
+  }, [lists, filter, isFiltering])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -178,7 +198,7 @@ export default function BoardView({ board, onCardClick }: Props) {
     >
       <div className="flex flex-1 gap-4 overflow-x-auto p-6">
         <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
-          {lists.map((list) => (
+          {displayLists.map((list) => (
             <SortableListColumn
               key={list.id}
               boardId={board.id}
