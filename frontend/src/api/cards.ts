@@ -96,6 +96,19 @@ export function useUpdateCard(boardId: string, cardId?: string) {
   })
 }
 
+export function useVoteCard(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { cardId: string; vote: boolean }) => {
+      if (input.vote) await api.post(`/cards/${input.cardId}/vote`)
+      else await api.delete(`/cards/${input.cardId}/vote`)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+}
+
 export function useDeleteCard(boardId: string) {
   const qc = useQueryClient()
   return useMutation({

@@ -7,9 +7,10 @@ interface Props {
   card: BoardCard
   onCardClick: (cardId: string) => void
   staleThresholdDays?: number
+  boardId?: string
 }
 
-export default function SortableCard({ card, onCardClick, staleThresholdDays }: Props) {
+export default function SortableCard({ card, onCardClick, staleThresholdDays, boardId }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, data: { type: 'card', listId: card.list_id } })
 
@@ -47,6 +48,7 @@ export default function SortableCard({ card, onCardClick, staleThresholdDays }: 
         card={card}
         onClick={() => onCardClick(card.id)}
         staleThresholdDays={staleThresholdDays}
+        boardId={boardId}
       />
     </div>
   )

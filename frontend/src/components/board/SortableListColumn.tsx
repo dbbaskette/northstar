@@ -6,8 +6,8 @@ import {
 } from '@dnd-kit/sortable'
 import type { BoardList } from '@/api/boards'
 import { useArchiveList, useCopyList, useUpdateList } from '@/api/lists'
-import { useState } from 'react'
-import { MoreHorizontal, Trash2, Copy } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { MoreHorizontal, Trash2, Copy, ArrowDownAZ, ThumbsUp } from 'lucide-react'
 import SortableCard from './SortableCard'
 import AddCard from '../card/AddCard'
 
@@ -25,6 +25,7 @@ export default function SortableListColumn({ boardId, list, onCardClick, staleTh
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState(list.name)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<'manual' | 'votes'>('manual')
   const updateList = useUpdateList(boardId)
   const archiveList = useArchiveList(boardId)
   const copyList = useCopyList(boardId)
@@ -43,7 +44,12 @@ export default function SortableListColumn({ boardId, list, onCardClick, staleTh
     setMenuOpen(false)
   }
 
-  const cardIds = (list.cards || []).map((c) => c.id)
+  const orderedCards = useMemo(() => {
+    const cards = list.cards || []
+    if (sortBy !== 'votes') return cards
+    return [...cards].sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0))
+  }, [list.cards, sortBy])
+  const cardIds = orderedCards.map((c) => c.id)
 
   return (
     <div
@@ -93,7 +99,26 @@ export default function SortableListColumn({ boardId, list, onCardClick, staleTh
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+              <div className="absolute right-0 z-20 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                <button
+                  onClick={() => {
+                    setSortBy(sortBy === 'votes' ? 'manual' : 'votes')
+                    setMenuOpen(false)
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  {sortBy === 'votes' ? (
+                    <>
+                      <ArrowDownAZ className="h-4 w-4" />
+                      Manual order
+                    </>
+                  ) : (
+                    <>
+                      <ThumbsUp className="h-4 w-4" />
+                      Sort by votes
+                    </>
+                  )}
+                </button>
                 <button
                   onClick={() => {
                     copyList.mutate(list.id)
@@ -119,12 +144,13 @@ export default function SortableListColumn({ boardId, list, onCardClick, staleTh
 
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-2 overflow-y-auto px-1 min-h-1">
-          {(list.cards || []).map((card) => (
+          {(orderedCards).map((card) => (
             <SortableCard
               key={card.id}
               card={card}
               onCardClick={onCardClick}
               staleThresholdDays={staleThresholdDays}
+              boardId={boardId}
             />
           ))}
         </div>

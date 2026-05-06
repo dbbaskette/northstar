@@ -76,6 +76,7 @@ func main() {
 	automationRepo := repository.NewAutomationRepo(pool)
 	auditRepo := repository.NewAuditRepo(pool)
 	reportRepo := repository.NewReportRepo(pool)
+	voteRepo := repository.NewVoteRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -102,7 +103,7 @@ func main() {
 
 	authHandler := handler.NewAuthHandler(authService, auditRepo)
 	teamHandler := handler.NewTeamHandler(teamRepo, auditRepo)
-	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo, boardCopier, auditRepo)
+	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo, boardCopier, auditRepo, voteRepo)
 	listHandler := handler.NewListHandler(listRepo, events, boardCopier)
 	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events, mentions, cardCopier)
 	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events, mentions)
@@ -127,6 +128,7 @@ func main() {
 	ssoHandler := handler.NewSSOHandler(githubOAuth, auditRepo)
 	adminUserHandler := handler.NewAdminUserHandler(userRepo, auditRepo)
 	reportHandler := handler.NewReportHandler(reportRepo, boardRepo)
+	voteHandler := handler.NewVoteHandler(voteRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -270,6 +272,8 @@ func main() {
 				r.Patch("/cover", cardHandler.SetCover)
 				r.Post("/copy", cardHandler.Copy)
 				r.Post("/move-to", cardHandler.MoveToList)
+				r.Post("/vote", voteHandler.Add)
+				r.Delete("/vote", voteHandler.Remove)
 
 				r.Post("/labels", labelHandler.AttachToCard)
 				r.Delete("/labels/{labelId}", labelHandler.DetachFromCard)

@@ -42,7 +42,9 @@ type Card struct {
 	CustomFields      []CustomFieldValue `json:"custom_fields,omitempty"`
 
 	// Aggregate counts (used on the board view, not the full card detail)
-	ChecklistTotal  int `json:"checklist_total,omitempty"`
-	ChecklistDone   int `json:"checklist_done,omitempty"`
-	AttachmentCount int `json:"attachment_count,omitempty"`
+	ChecklistTotal  int  `json:"checklist_total,omitempty"`
+	ChecklistDone   int  `json:"checklist_done,omitempty"`
+	AttachmentCount int  `json:"attachment_count,omitempty"`
+	VoteCount       int  `json:"vote_count"`
+	ViewerVoted     bool `json:"viewer_voted"`
 }

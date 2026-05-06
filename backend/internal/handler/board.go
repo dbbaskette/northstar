@@ -18,6 +18,7 @@ type BoardHandler struct {
 	teamRepo  *repository.TeamRepo
 	copier    *service.BoardCopier
 	audit     *repository.AuditRepo
+	voteRepo  *repository.VoteRepo
 }
 
 func NewBoardHandler(
@@ -25,8 +26,15 @@ func NewBoardHandler(
 	teamRepo *repository.TeamRepo,
 	copier *service.BoardCopier,
 	audit *repository.AuditRepo,
+	voteRepo *repository.VoteRepo,
 ) *BoardHandler {
-	return &BoardHandler{boardRepo: boardRepo, teamRepo: teamRepo, copier: copier, audit: audit}
+	return &BoardHandler{
+		boardRepo: boardRepo,
+		teamRepo:  teamRepo,
+		copier:    copier,
+		audit:     audit,
+		voteRepo:  voteRepo,
+	}
 }
 
 func (h *BoardHandler) logAudit(r *http.Request, action, targetID string, meta map[string]interface{}) {
@@ -155,6 +163,17 @@ func (h *BoardHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
+	}
+
+	if h.voteRepo != nil {
+		counts, voted, _ := h.voteRepo.CountsForBoard(r.Context(), boardID, userID)
+		for li := range board.Lists {
+			for ci := range board.Lists[li].Cards {
+				cid := uuidStr(board.Lists[li].Cards[ci].ID)
+				board.Lists[li].Cards[ci].VoteCount = counts[cid]
+				board.Lists[li].Cards[ci].ViewerVoted = voted[cid]
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusOK, board)

@@ -45,6 +45,8 @@ export interface BoardCard {
   checklist_total?: number
   checklist_done?: number
   attachment_count?: number
+  vote_count?: number
+  viewer_voted?: boolean
   labels?: BoardLabel[]
   cover_attachment_id?: { Bytes: number[]; Valid: boolean } | null
   cover_color?: { String: string; Valid: boolean } | string | null

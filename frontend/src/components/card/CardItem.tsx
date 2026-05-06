@@ -1,5 +1,6 @@
-import { Calendar, Check, CheckSquare, Paperclip } from 'lucide-react'
+import { Calendar, Check, CheckSquare, Paperclip, ThumbsUp } from 'lucide-react'
 import type { BoardCard } from '@/api/boards'
+import { useVoteCard } from '@/api/cards'
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -16,9 +17,11 @@ interface Props {
   onClick: () => void
   isDragging?: boolean
   staleThresholdDays?: number
+  boardId?: string
 }
 
-export default function CardItem({ card, onClick, isDragging, staleThresholdDays }: Props) {
+export default function CardItem({ card, onClick, isDragging, staleThresholdDays, boardId }: Props) {
+  const voteCard = useVoteCard(boardId || '')
   const priority = cardPriority(card)
   const dueDate = cardDueDate(card)
   const completedAt = cardCompletedAt(card)
@@ -170,6 +173,24 @@ export default function CardItem({ card, onClick, isDragging, staleThresholdDays
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               {staleDays}d
             </span>
+          )}
+          {boardId && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                voteCard.mutate({ cardId: card.id, vote: !card.viewer_voted })
+              }}
+              aria-label={card.viewer_voted ? 'Remove vote' : 'Vote for this card'}
+              aria-pressed={card.viewer_voted}
+              className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 transition ${
+                card.viewer_voted
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
+                  : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+              }`}
+            >
+              <ThumbsUp className="h-3 w-3" />
+              {card.vote_count || 0}
+            </button>
           )}
         </div>
       </div>
