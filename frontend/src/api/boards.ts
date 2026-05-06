@@ -76,6 +76,19 @@ export function useBoard(boardId: string | null) {
   })
 }
 
+export function useCopyBoard() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { boardId: string; name?: string }): Promise<{ board_id: string }> => {
+      const res = await api.post(`/boards/${input.boardId}/copy`, { name: input.name })
+      return res.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['boards'] })
+    },
+  })
+}
+
 export function useCreateBoard() {
   const qc = useQueryClient()
   return useMutation({

@@ -50,3 +50,16 @@ export function useReorderList(boardId: string) {
     },
   })
 }
+
+export function useCopyList(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (listId: string): Promise<{ list_id: string }> => {
+      const res = await api.post(`/lists/${listId}/copy`)
+      return res.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
+  })
+}

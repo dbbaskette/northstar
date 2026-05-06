@@ -10,15 +10,21 @@ import (
 	"github.com/dbbaskette/northstar/internal/middleware"
 	"github.com/dbbaskette/northstar/internal/models"
 	"github.com/dbbaskette/northstar/internal/repository"
+	"github.com/dbbaskette/northstar/internal/service"
 )
 
 type BoardHandler struct {
 	boardRepo *repository.BoardRepo
 	teamRepo  *repository.TeamRepo
+	copier    *service.BoardCopier
 }
 
-func NewBoardHandler(boardRepo *repository.BoardRepo, teamRepo *repository.TeamRepo) *BoardHandler {
-	return &BoardHandler{boardRepo: boardRepo, teamRepo: teamRepo}
+func NewBoardHandler(
+	boardRepo *repository.BoardRepo,
+	teamRepo *repository.TeamRepo,
+	copier *service.BoardCopier,
+) *BoardHandler {
+	return &BoardHandler{boardRepo: boardRepo, teamRepo: teamRepo, copier: copier}
 }
 
 type createBoardRequest struct {
@@ -35,6 +41,10 @@ type updateBoardRequest struct {
 
 type updateVisibilityRequest struct {
 	Visibility string `json:"visibility"`
+}
+
+type copyBoardRequest struct {
+	Name string `json:"name"`
 }
 
 type addBoardMemberRequest struct {
@@ -270,6 +280,28 @@ func (h *BoardHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func (h *BoardHandler) Copy(w http.ResponseWriter, r *http.Request) {
+	boardID := chi.URLParam(r, "boardId")
+	userID := middleware.GetUserID(r.Context())
+
+	role, err := h.boardRepo.AccessibleByUser(r.Context(), boardID, userID)
+	if err != nil || role == "" {
+		writeError(w, http.StatusForbidden, "no access")
+		return
+	}
+
+	var req copyBoardRequest
+	json.NewDecoder(r.Body).Decode(&req) // body optional
+
+	newID, err := h.copier.CopyBoard(r.Context(), boardID, userID, req.Name)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]string{"board_id": newID})
 }
 
 func (h *BoardHandler) Delete(w http.ResponseWriter, r *http.Request) {

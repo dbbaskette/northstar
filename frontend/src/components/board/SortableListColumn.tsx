@@ -5,9 +5,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { BoardList } from '@/api/boards'
-import { useArchiveList, useUpdateList } from '@/api/lists'
+import { useArchiveList, useCopyList, useUpdateList } from '@/api/lists'
 import { useState } from 'react'
-import { MoreHorizontal, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Trash2, Copy } from 'lucide-react'
 import SortableCard from './SortableCard'
 import AddCard from '../card/AddCard'
 
@@ -26,6 +26,7 @@ export default function SortableListColumn({ boardId, list, onCardClick }: Props
   const [menuOpen, setMenuOpen] = useState(false)
   const updateList = useUpdateList(boardId)
   const archiveList = useArchiveList(boardId)
+  const copyList = useCopyList(boardId)
 
   const handleSaveName = async () => {
     if (name.trim() && name !== list.name) {
@@ -90,10 +91,20 @@ export default function SortableListColumn({ boardId, list, onCardClick }: Props
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 z-20 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+              <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                <button
+                  onClick={() => {
+                    copyList.mutate(list.id)
+                    setMenuOpen(false)
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy list
+                </button>
                 <button
                   onClick={handleDelete}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <Trash2 className="h-4 w-4" />
                   Archive list

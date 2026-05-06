@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Archive, Share2, Lock } from 'lucide-react'
-import { useBoard } from '@/api/boards'
+import { ChevronLeft, Archive, Share2, Lock, Copy } from 'lucide-react'
+import { useBoard, useCopyBoard } from '@/api/boards'
 import BoardView from '@/components/board/BoardView'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import BoardSharingModal from '@/components/board/BoardSharingModal'
@@ -18,6 +18,8 @@ export default function BoardPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
+
+  const copyBoard = useCopyBoard()
 
   useBoardWebSocket(boardId || null)
 
@@ -67,6 +69,19 @@ export default function BoardPage() {
         </div>
         <div className="flex items-center gap-2">
           <BoardFilters board={board} onChange={setFilter} />
+          <button
+            onClick={async () => {
+              const name = prompt('Name for the copy?', `${board.name} (copy)`)
+              if (!name) return
+              const res = await copyBoard.mutateAsync({ boardId: board.id, name })
+              window.location.href = `/boards/${res.board_id}`
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
+            title="Copy this board"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy
+          </button>
           <button
             onClick={() => setShowShare(true)}
             className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"

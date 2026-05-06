@@ -16,10 +16,11 @@ import (
 type ListHandler struct {
 	listRepo *repository.ListRepo
 	events   *service.Events
+	copier   *service.BoardCopier
 }
 
-func NewListHandler(listRepo *repository.ListRepo, events *service.Events) *ListHandler {
-	return &ListHandler{listRepo: listRepo, events: events}
+func NewListHandler(listRepo *repository.ListRepo, events *service.Events, copier *service.BoardCopier) *ListHandler {
+	return &ListHandler{listRepo: listRepo, events: events, copier: copier}
 }
 
 type createListRequest struct {
@@ -110,6 +111,26 @@ func (h *ListHandler) Archive(w http.ResponseWriter, r *http.Request) {
 	})
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "archived"})
+}
+
+func (h *ListHandler) Copy(w http.ResponseWriter, r *http.Request) {
+	listID := chi.URLParam(r, "listId")
+	userID := middleware.GetUserID(r.Context())
+
+	newID, err := h.copier.CopyList(r.Context(), listID, userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if list, err := h.listRepo.FindByID(r.Context(), newID); err == nil {
+		h.events.Emit(r.Context(), uuidStr(list.BoardID), userID, "list.copied", "list", newID, map[string]interface{}{
+			"list_id":        newID,
+			"source_list_id": listID,
+		})
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]string{"list_id": newID})
 }
 
 func (h *ListHandler) Reorder(w http.ResponseWriter, r *http.Request) {
