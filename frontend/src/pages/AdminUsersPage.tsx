@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, UserCheck, Trash2, ClockAlert } from 'lucide-react'
 import {
   useAdminUsers,
+  useApproveUser,
   useBulkRole,
+  useDeleteUser,
   useRevokeSessions,
   useUpdateAdminUser,
   type AdminUser,
@@ -17,6 +19,8 @@ export default function AdminUsersPage() {
   const { data: users = [], isLoading } = useAdminUsers()
   const updateUser = useUpdateAdminUser()
   const revokeSessions = useRevokeSessions()
+  const approveUser = useApproveUser()
+  const deleteUser = useDeleteUser()
   const bulkRole = useBulkRole()
 
   const [search, setSearch] = useState('')
@@ -52,9 +56,30 @@ export default function AdminUsersPage() {
       <div>
         <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Users</h1>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Change roles, deactivate accounts, and revoke active sessions.
+          Approve new accounts, change roles, deactivate or delete users, and revoke
+          active sessions.
         </p>
       </div>
+
+      {(() => {
+        const pending = users.filter((u) => !u.approved_at)
+        if (pending.length === 0) return null
+        return (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+            <div className="flex items-center gap-2">
+              <ClockAlert className="h-4 w-4" />
+              <span className="font-semibold">
+                {pending.length} {pending.length === 1 ? 'account is' : 'accounts are'} pending
+                approval
+              </span>
+            </div>
+            <p className="mt-1 text-xs">
+              Pending users can't sign in until you approve them. They appear at the top of
+              the list below.
+            </p>
+          </div>
+        )
+      })()}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="relative">
@@ -146,15 +171,28 @@ export default function AdminUsersPage() {
                 <UserRow
                   key={u.id}
                   user={u}
+                  isSelf={u.id === me.id}
                   selected={selected.has(u.id)}
                   onToggle={() => toggleSelected(u.id)}
                   onRoleChange={(role) => updateUser.mutate({ userId: u.id, role })}
                   onActiveChange={(is_active) =>
                     updateUser.mutate({ userId: u.id, is_active })
                   }
+                  onApprove={() => approveUser.mutate(u.id)}
                   onRevoke={() => {
                     if (confirm(`Revoke all sessions for ${u.display_name}?`)) {
                       revokeSessions.mutate(u.id)
+                    }
+                  }}
+                  onDelete={() => {
+                    if (
+                      confirm(
+                        `Permanently delete ${u.display_name} (${u.email})?\n\n` +
+                          `This cannot be undone. Boards and cards they created will stay, ` +
+                          `but their account, comments, and assignments will be removed.`,
+                      )
+                    ) {
+                      deleteUser.mutate(u.id)
                     }
                   }}
                 />
@@ -169,21 +207,36 @@ export default function AdminUsersPage() {
 
 function UserRow({
   user,
+  isSelf,
   selected,
   onToggle,
   onRoleChange,
   onActiveChange,
+  onApprove,
   onRevoke,
+  onDelete,
 }: {
   user: AdminUser
+  isSelf: boolean
   selected: boolean
   onToggle: () => void
   onRoleChange: (role: string) => void
   onActiveChange: (is_active: boolean) => void
+  onApprove: () => void
   onRevoke: () => void
+  onDelete: () => void
 }) {
+  const pending = !user.approved_at
   return (
-    <tr className={user.is_active ? '' : 'opacity-60'}>
+    <tr
+      className={
+        pending
+          ? 'bg-amber-50/50 dark:bg-amber-900/10'
+          : user.is_active
+            ? ''
+            : 'opacity-60'
+      }
+    >
       <td className="px-3 py-2">
         <input
           type="checkbox"
@@ -193,7 +246,14 @@ function UserRow({
         />
       </td>
       <td className="px-3 py-2">
-        <div className="font-medium text-gray-900 dark:text-gray-100">{user.display_name}</div>
+        <div className="font-medium text-gray-900 dark:text-gray-100">
+          {user.display_name}
+          {isSelf && (
+            <span className="ml-2 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-blue-700">
+              you
+            </span>
+          )}
+        </div>
         <div className="text-xs text-gray-500">@{user.username}</div>
       </td>
       <td className="px-3 py-2 text-gray-700 dark:text-gray-200">
@@ -217,7 +277,11 @@ function UserRow({
         </select>
       </td>
       <td className="px-3 py-2 text-xs">
-        {user.is_active ? (
+        {pending ? (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
+            pending
+          </span>
+        ) : user.is_active ? (
           <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">
             active
           </span>
@@ -231,27 +295,49 @@ function UserRow({
         {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : '—'}
       </td>
       <td className="px-3 py-2">
-        <div className="flex gap-1">
-          {user.is_active ? (
+        <div className="flex flex-wrap gap-1">
+          {pending && (
             <button
-              onClick={() => onActiveChange(false)}
-              className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+              onClick={onApprove}
+              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
             >
-              Deactivate
-            </button>
-          ) : (
-            <button
-              onClick={() => onActiveChange(true)}
-              className="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100"
-            >
-              Reactivate
+              <UserCheck className="h-3 w-3" />
+              Approve
             </button>
           )}
+          {!pending &&
+            (user.is_active ? (
+              <button
+                onClick={() => onActiveChange(false)}
+                disabled={isSelf}
+                className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                title={isSelf ? "You can't deactivate your own account" : undefined}
+              >
+                Deactivate
+              </button>
+            ) : (
+              <button
+                onClick={() => onActiveChange(true)}
+                className="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100"
+              >
+                Reactivate
+              </button>
+            ))}
           <button
             onClick={onRevoke}
             className="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200"
           >
             Revoke sessions
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={isSelf}
+            aria-label={`Delete ${user.display_name}`}
+            title={isSelf ? "You can't delete your own account" : 'Delete user permanently'}
+            className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Trash2 className="h-3 w-3" />
+            Delete
           </button>
         </div>
       </td>

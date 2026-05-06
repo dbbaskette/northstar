@@ -116,6 +116,10 @@ func (g *GitHubOAuth) HandleCallback(
 		return nil, nil, "", fmt.Errorf("account is deactivated")
 	}
 
+	if approved, err := g.userRepo.IsApproved(ctx, uuidString(user.ID)); err != nil || !approved {
+		return nil, nil, "", ErrPendingApproval
+	}
+
 	tokens, err := g.auth.GenerateTokens(ctx, user)
 	if err != nil {
 		return nil, nil, "", err
@@ -271,17 +275,25 @@ func (g *GitHubOAuth) resolveUser(ctx context.Context, p *GitHubProfile) (*model
 
 	// 3. New user — provision with the default member role. Username
 	//    must be unique; lean on the GitHub login but fall back to
-	//    something email-derived if it collides.
+	//    something email-derived if it collides. The first user
+	//    created via SSO (when no local accounts exist yet) becomes
+	//    the bootstrap admin and is auto-approved.
 	username := p.Login
 	if username == "" {
 		username = strings.SplitN(p.Email, "@", 2)[0]
+	}
+
+	count, _ := g.userRepo.CountUsers(ctx)
+	role := "member"
+	if count == 0 {
+		role = "admin"
 	}
 
 	u := &models.User{
 		Email:       p.Email,
 		Username:    username,
 		DisplayName: p.DisplayName,
-		Role:        "member",
+		Role:        role,
 	}
 	if err := g.userRepo.CreateExternalUser(ctx, u, "github", p.ID); err != nil {
 		// Likely a username collision; retry once with a numeric suffix.
@@ -289,6 +301,9 @@ func (g *GitHubOAuth) resolveUser(ctx context.Context, p *GitHubProfile) (*model
 		if err2 := g.userRepo.CreateExternalUser(ctx, u, "github", p.ID); err2 != nil {
 			return nil, fmt.Errorf("create user: %w", err)
 		}
+	}
+	if count == 0 {
+		_ = g.userRepo.Approve(ctx, uuidString(u.ID))
 	}
 	return u, nil
 }

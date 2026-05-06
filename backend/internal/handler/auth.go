@@ -66,9 +66,18 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, tokens, err := h.authService.Register(r.Context(), req.Email, req.Username, req.Password, req.DisplayName)
-	if err != nil {
+	if err != nil && err != service.ErrPendingApproval {
 		h.logAudit(r, "", "auth.register_failed", map[string]interface{}{"email": req.Email, "error": err.Error()})
 		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+
+	if err == service.ErrPendingApproval {
+		h.logAudit(r, uuidStr(user.ID), "auth.register_pending", map[string]interface{}{"email": user.Email})
+		writeJSON(w, http.StatusAccepted, map[string]interface{}{
+			"user":             user,
+			"pending_approval": true,
+		})
 		return
 	}
 
@@ -102,6 +111,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == service.ErrTwoFARequired {
 			writeJSON(w, http.StatusOK, map[string]interface{}{"two_factor_required": true})
+			return
+		}
+		if err == service.ErrPendingApproval {
+			writeJSON(w, http.StatusForbidden, map[string]interface{}{"pending_approval": true})
 			return
 		}
 		h.logAudit(r, "", "auth.login_failed", map[string]interface{}{"email": req.Email})

@@ -21,17 +21,21 @@ export default function LoginPage() {
   const [providers, setProviders] = useState<SSOProviders>({})
   const [needTOTP, setNeedTOTP] = useState(false)
   const [totpCode, setTotpCode] = useState('')
+  const [pending, setPending] = useState(false)
   const login = useAuthStore((s) => s.login)
   const register = useAuthStore((s) => s.register)
   const hydrate = useAuthStore((s) => s.hydrateFromAccessToken)
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Surface backend ?error=... query string set by the SSO callback.
+  // Surface backend ?error=... or ?pending=1 query string set by the
+  // SSO callback (server-side redirects use these to pass status to
+  // the SPA without a stateful session).
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const e = params.get('error')
     if (e) setError(decodeURIComponent(e))
+    if (params.get('pending') === '1') setPending(true)
   }, [location.search])
 
   // Capture tokens that arrive in the URL fragment after an SSO redirect.
@@ -74,13 +78,23 @@ export default function LoginPage() {
           setLoading(false)
           return
         }
+        if (result && 'pendingApproval' in result) {
+          setPending(true)
+          setLoading(false)
+          return
+        }
       } else {
         if (password.length < 8) {
           setError('Password must be at least 8 characters')
           setLoading(false)
           return
         }
-        await register(email, username, password, displayName)
+        const result = await register(email, username, password, displayName)
+        if (result && 'pendingApproval' in result) {
+          setPending(true)
+          setLoading(false)
+          return
+        }
       }
       navigate('/dashboard')
     } catch (err: unknown) {
@@ -112,6 +126,38 @@ export default function LoginPage() {
   }
 
   const ssoEnabled = providers.github
+
+  if (pending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100 p-4 dark:from-gray-900 dark:to-gray-800">
+        <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-800">
+          <div className="mb-4 flex justify-center">
+            <div className="rounded-full bg-amber-100 p-3 dark:bg-amber-900/40">
+              <Star className="h-8 w-8 text-amber-600" />
+            </div>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Waiting on an admin
+          </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            Your account has been created and is pending admin approval. You'll be able to
+            sign in once an admin approves it.
+          </p>
+          <button
+            onClick={() => {
+              setPending(false)
+              setError('')
+              setNeedTOTP(false)
+              setTotpCode('')
+            }}
+            className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">

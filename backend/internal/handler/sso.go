@@ -67,6 +67,10 @@ func (h *SSOHandler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
 
 	user, tokens, returnTo, err := h.github.HandleCallback(r.Context(), code, state)
 	if err != nil {
+		if err == service.ErrPendingApproval {
+			http.Redirect(w, r, "/login?pending=1", http.StatusFound)
+			return
+		}
 		if h.audit != nil {
 			_ = h.audit.Insert(r.Context(), repository.AuditInsert{
 				Action:    "auth.sso_failed",

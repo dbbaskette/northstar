@@ -5,8 +5,17 @@ interface AuthState {
   accessToken: string | null
   user: { id: string; email: string; username: string; displayName: string; role: string } | null
   isAuthenticated: boolean
-  login: (email: string, password: string, totpCode?: string) => Promise<void | { twoFactorRequired: true }>
-  register: (email: string, username: string, password: string, displayName: string) => Promise<void>
+  login: (
+    email: string,
+    password: string,
+    totpCode?: string,
+  ) => Promise<void | { twoFactorRequired: true } | { pendingApproval: true }>
+  register: (
+    email: string,
+    username: string,
+    password: string,
+    displayName: string,
+  ) => Promise<void | { pendingApproval: true }>
   refresh: () => Promise<void>
   logout: () => void
   setAuth: (token: string, user: AuthState['user']) => void
@@ -23,19 +32,30 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (token, user) => set({ accessToken: token, user, isAuthenticated: true }),
 
   login: async (email, password, totpCode) => {
-    const res = await axios.post('/api/v1/auth/login', {
-      email,
-      password,
-      totp_code: totpCode,
-    })
-    if (res.data.two_factor_required) {
-      return { twoFactorRequired: true } as const
+    try {
+      const res = await axios.post('/api/v1/auth/login', {
+        email,
+        password,
+        totp_code: totpCode,
+      })
+      if (res.data.two_factor_required) {
+        return { twoFactorRequired: true } as const
+      }
+      if (res.data.pending_approval) {
+        return { pendingApproval: true } as const
+      }
+      set({
+        accessToken: res.data.access_token,
+        user: res.data.user,
+        isAuthenticated: true,
+      })
+    } catch (err) {
+      const e = err as { response?: { status?: number; data?: { pending_approval?: boolean } } }
+      if (e.response?.status === 403 && e.response.data?.pending_approval) {
+        return { pendingApproval: true } as const
+      }
+      throw err
     }
-    set({
-      accessToken: res.data.access_token,
-      user: res.data.user,
-      isAuthenticated: true,
-    })
   },
 
   register: async (email, username, password, displayName) => {
@@ -45,6 +65,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       password,
       display_name: displayName,
     })
+    if (res.data.pending_approval) {
+      return { pendingApproval: true } as const
+    }
     set({
       accessToken: res.data.access_token,
       user: res.data.user,

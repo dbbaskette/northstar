@@ -107,3 +107,31 @@ func (h *AdminUserHandler) RevokeSessions(w http.ResponseWriter, r *http.Request
 	h.audited(r, "user.sessions_revoked", userID, nil)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
+func (h *AdminUserHandler) Approve(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userId")
+	if err := h.userRepo.Approve(r.Context(), userID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.audited(r, "user.approved", userID, nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "approved"})
+}
+
+// Delete removes the user permanently. Cascades through every FK
+// that references users.id ON DELETE CASCADE/SET NULL. The acting
+// admin can't delete themselves — they have to switch admins first.
+func (h *AdminUserHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userId")
+	actorID := middleware.GetUserID(r.Context())
+	if userID == actorID {
+		writeError(w, http.StatusBadRequest, "you cannot delete your own account")
+		return
+	}
+	if err := h.userRepo.HardDelete(r.Context(), userID); err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	h.audited(r, "user.deleted", userID, nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}

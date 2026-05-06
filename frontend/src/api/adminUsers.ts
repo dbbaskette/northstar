@@ -9,6 +9,7 @@ export interface AdminUser {
   role: string
   is_active: boolean
   deactivated_at?: string | null
+  approved_at?: string | null
   external_provider?: string | null
   created_at: string
   last_login_at?: string | null
@@ -44,6 +45,26 @@ export function useRevokeSessions() {
     mutationFn: async (userId: string) => {
       await api.post(`/admin/users/${userId}/revoke-sessions`)
     },
+  })
+}
+
+export function useApproveUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.post(`/admin/users/${userId}/approve`)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  })
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/admin/users/${userId}`)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 }
 

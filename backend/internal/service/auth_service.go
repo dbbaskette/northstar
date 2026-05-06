@@ -52,10 +52,28 @@ func (s *AuthService) SetSessions(sessions *repository.SessionRepo, twofa *repos
 // from the user and retry Login with it.
 var ErrTwoFARequired = errors.New("2fa_required")
 
+// ErrPendingApproval is returned when an unapproved user tries to
+// log in or finish a registration. The handler turns this into a
+// dedicated 403 + JSON status field so the SPA can render a
+// "waiting on an admin" screen instead of a generic credential error.
+var ErrPendingApproval = errors.New("pending_approval")
+
 func (s *AuthService) Register(ctx context.Context, email, username, password, displayName string) (*models.User, *TokenPair, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, nil, fmt.Errorf("hashing password: %w", err)
+	}
+
+	// First user becomes the bootstrap admin and is auto-approved so
+	// they can log in immediately. Everyone after that lands as a
+	// pending member awaiting admin approval.
+	count, err := s.userRepo.CountUsers(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("counting users: %w", err)
+	}
+	role := "member"
+	if count == 0 {
+		role = "admin"
 	}
 
 	user := &models.User{
@@ -63,19 +81,28 @@ func (s *AuthService) Register(ctx context.Context, email, username, password, d
 		Username:     username,
 		PasswordHash: string(hash),
 		DisplayName:  displayName,
-		Role:         "member",
+		Role:         role,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, nil, fmt.Errorf("creating user: %w", err)
 	}
 
-	tokens, err := s.generateTokens(ctx, user)
-	if err != nil {
-		return nil, nil, err
+	if count == 0 {
+		// Self-approve the bootstrap admin and hand them tokens.
+		if err := s.userRepo.Approve(ctx, uuidToString(user.ID)); err != nil {
+			return nil, nil, err
+		}
+		tokens, err := s.generateTokens(ctx, user)
+		if err != nil {
+			return nil, nil, err
+		}
+		return user, tokens, nil
 	}
 
-	return user, tokens, nil
+	// Subsequent users wait for admin approval — return the user record
+	// (handler converts to a "pending" response) but no tokens.
+	return user, nil, ErrPendingApproval
 }
 
 // LoginInput bundles the optional bits the auth handler can pass —
@@ -100,6 +127,10 @@ func (s *AuthService) Login(ctx context.Context, in LoginInput) (*models.User, *
 
 	if active, err := s.userRepo.IsActive(ctx, uuidToString(user.ID)); err != nil || !active {
 		return nil, nil, fmt.Errorf("account is deactivated")
+	}
+
+	if approved, err := s.userRepo.IsApproved(ctx, uuidToString(user.ID)); err != nil || !approved {
+		return nil, nil, ErrPendingApproval
 	}
 
 	if s.twofaRepo != nil {
@@ -147,6 +178,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (string,
 
 	if active, err := s.userRepo.IsActive(ctx, userID); err != nil || !active {
 		return "", fmt.Errorf("account is deactivated")
+	}
+
+	if approved, err := s.userRepo.IsApproved(ctx, userID); err != nil || !approved {
+		return "", ErrPendingApproval
 	}
 
 	// Refresh mints a fresh session row with its own jti so revoking

@@ -180,6 +180,8 @@ func main() {
 				r.Get("/admin/audit-log.csv", auditHandler.ExportCSV)
 				r.Get("/admin/users", adminUserHandler.List)
 				r.Patch("/admin/users/{userId}", adminUserHandler.Update)
+				r.Delete("/admin/users/{userId}", adminUserHandler.Delete)
+				r.Post("/admin/users/{userId}/approve", adminUserHandler.Approve)
 				r.Post("/admin/users/{userId}/revoke-sessions", adminUserHandler.RevokeSessions)
 				r.Post("/admin/users/bulk-role", adminUserHandler.BulkRole)
 

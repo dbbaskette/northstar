@@ -129,7 +129,8 @@ func (r *UserRepo) List(ctx context.Context) ([]models.User, error) {
 }
 
 // AdminUser is a fuller listing record exposed only via /admin/users —
-// it includes deactivation state and the SSO-link provider.
+// it includes deactivation state, approval state, and the SSO-link
+// provider.
 type AdminUser struct {
 	ID               string     `json:"id"`
 	Email            string     `json:"email"`
@@ -138,19 +139,21 @@ type AdminUser struct {
 	Role             string     `json:"role"`
 	IsActive         bool       `json:"is_active"`
 	DeactivatedAt    *time.Time `json:"deactivated_at,omitempty"`
+	ApprovedAt       *time.Time `json:"approved_at,omitempty"`
 	ExternalProvider *string    `json:"external_provider,omitempty"`
 	CreatedAt        time.Time  `json:"created_at"`
 	LastLoginAt      *time.Time `json:"last_login_at,omitempty"`
 }
 
 func (r *UserRepo) AdminList(ctx context.Context) ([]AdminUser, error) {
+	// Pending users sort to the very top so they don't get missed.
 	const q = `
 		SELECT u.id::text, u.email, u.username, u.display_name, u.role, u.is_active,
-		       u.deactivated_at, u.external_provider, u.created_at,
+		       u.deactivated_at, u.approved_at, u.external_provider, u.created_at,
 		       (SELECT MAX(created_at) FROM audit_log a
 		          WHERE a.actor_user_id = u.id AND a.action IN ('auth.login','auth.sso_login'))
 		FROM users u
-		ORDER BY u.is_active DESC, u.display_name`
+		ORDER BY (u.approved_at IS NULL) DESC, u.is_active DESC, u.display_name`
 
 	rows, err := r.pool.Query(ctx, q)
 	if err != nil {
@@ -161,20 +164,77 @@ func (r *UserRepo) AdminList(ctx context.Context) ([]AdminUser, error) {
 	out := []AdminUser{}
 	for rows.Next() {
 		var u AdminUser
-		var deact, last *time.Time
+		var deact, approved, last *time.Time
 		var prov *string
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Role, &u.IsActive,
-			&deact, &prov, &u.CreatedAt, &last,
+			&deact, &approved, &prov, &u.CreatedAt, &last,
 		); err != nil {
 			return nil, err
 		}
 		u.DeactivatedAt = deact
+		u.ApprovedAt = approved
 		u.LastLoginAt = last
 		u.ExternalProvider = prov
 		out = append(out, u)
 	}
 	return out, rows.Err()
+}
+
+// CountUsers returns how many users exist — used by Register to
+// detect the very first signup and bootstrap the admin role.
+func (r *UserRepo) CountUsers(ctx context.Context) (int, error) {
+	var n int
+	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&n)
+	return n, err
+}
+
+// Approve flips approved_at from NULL to NOW(). No-op (returns nil) on
+// already-approved users so admins can click the button repeatedly
+// without needing extra state checks.
+func (r *UserRepo) Approve(ctx context.Context, userID string) error {
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE users SET approved_at = NOW() WHERE id = $1 AND approved_at IS NULL`,
+		userID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		// Either the user doesn't exist or they're already approved.
+		// Treat already-approved as success so the UI doesn't 404 on a
+		// double-click; the repo caller can verify existence via FindByID
+		// when it matters.
+	}
+	return nil
+}
+
+// IsApproved returns true when approved_at is set.
+func (r *UserRepo) IsApproved(ctx context.Context, userID string) (bool, error) {
+	var approved *time.Time
+	err := r.pool.QueryRow(ctx,
+		`SELECT approved_at FROM users WHERE id = $1`, userID).Scan(&approved)
+	if err == pgx.ErrNoRows {
+		return false, fmt.Errorf("user not found")
+	}
+	if err != nil {
+		return false, err
+	}
+	return approved != nil, nil
+}
+
+// HardDelete removes the user row entirely. Cascades through every
+// table that references users.id ON DELETE CASCADE/SET NULL — boards
+// and cards they created stick around (created_by becomes NULL),
+// activity rows stay attributed to (deleted) ids.
+func (r *UserRepo) HardDelete(ctx context.Context, userID string) error {
+	ct, err := r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
 }
 
 func (r *UserRepo) SetRole(ctx context.Context, userID, role string) error {
