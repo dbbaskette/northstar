@@ -75,6 +75,7 @@ func main() {
 	webhookRepo := repository.NewWebhookRepo(pool)
 	automationRepo := repository.NewAutomationRepo(pool)
 	auditRepo := repository.NewAuditRepo(pool)
+	reportRepo := repository.NewReportRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -125,6 +126,7 @@ func main() {
 	auditHandler := handler.NewAuditHandler(auditRepo)
 	ssoHandler := handler.NewSSOHandler(githubOAuth, auditRepo)
 	adminUserHandler := handler.NewAdminUserHandler(userRepo, auditRepo)
+	reportHandler := handler.NewReportHandler(reportRepo, boardRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -243,6 +245,7 @@ func main() {
 				r.Get("/automations", automationHandler.List)
 				r.Post("/automations", automationHandler.Create)
 				r.Get("/activity", activityHandler.ListByBoard)
+				r.Get("/reports", reportHandler.Board)
 				r.Get("/archived", archiveHandler.ListArchived)
 			})
 
