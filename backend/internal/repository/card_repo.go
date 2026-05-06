@@ -367,5 +367,40 @@ func (r *CardRepo) GetCardWithDetails(ctx context.Context, id string) (*models.C
 		}
 	}
 
+	// Load custom field values
+	cfRows, err := r.pool.Query(ctx, `
+		SELECT field_def_id::text, value_text, value_number, value_date, value_bool
+		FROM custom_field_values WHERE card_id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer cfRows.Close()
+	for cfRows.Next() {
+		var (
+			fid   string
+			vtext pgtype.Text
+			vnum  pgtype.Float8
+			vdate pgtype.Timestamptz
+			vbool pgtype.Bool
+		)
+		if err := cfRows.Scan(&fid, &vtext, &vnum, &vdate, &vbool); err != nil {
+			return nil, err
+		}
+		v := models.CustomFieldValue{FieldDefID: fid}
+		if vtext.Valid {
+			v.Text = vtext.String
+		}
+		if vnum.Valid {
+			v.Number = vnum.Float64
+		}
+		if vdate.Valid {
+			v.Date = vdate.Time.Format("2006-01-02T15:04:05Z07:00")
+		}
+		if vbool.Valid {
+			v.Bool = vbool.Bool
+		}
+		card.CustomFields = append(card.CustomFields, v)
+	}
+
 	return card, nil
 }

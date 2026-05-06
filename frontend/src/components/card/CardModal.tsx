@@ -30,6 +30,7 @@ import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
 import CardCoverPicker from './CardCoverPicker'
 import CardCopyMoveModal from './CardCopyMoveModal'
+import CardCustomFields from './CardCustomFields'
 import Markdown from '../ui/Markdown'
 import Avatar from '../ui/Avatar'
 import {
@@ -396,6 +397,9 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
               card={card}
               attachments={card.attachments || []}
             />
+
+            {/* Custom fields */}
+            <CardCustomFields boardId={board.id} cardId={card.id} card={card} />
 
             {/* Add label */}
             <div>

@@ -69,6 +69,7 @@ func main() {
 	inviteRepo := repository.NewInviteRepo(pool)
 	notifRepo := repository.NewNotificationRepo(pool)
 	apiTokenRepo := repository.NewAPITokenRepo(pool)
+	customFieldRepo := repository.NewCustomFieldRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -102,6 +103,7 @@ func main() {
 	inviteHandler := handler.NewInviteHandler(inviteRepo, boardRepo, teamRepo)
 	notifHandler := handler.NewNotificationHandler(notifRepo)
 	apiTokenHandler := handler.NewAPITokenHandler(apiTokenRepo)
+	customFieldHandler := handler.NewCustomFieldHandler(customFieldRepo, boardRepo)
 
 	r := chi.NewRouter()
 
@@ -187,6 +189,8 @@ func main() {
 
 				r.Post("/lists", listHandler.Create)
 				r.Post("/labels", labelHandler.Create)
+				r.Get("/custom-fields", customFieldHandler.List)
+				r.Post("/custom-fields", customFieldHandler.Create)
 				r.Get("/activity", activityHandler.ListByBoard)
 				r.Get("/archived", archiveHandler.ListArchived)
 			})
@@ -220,6 +224,12 @@ func main() {
 				r.Post("/comments", commentHandler.Create)
 				r.Post("/checklists", checklistHandler.Create)
 				r.Post("/attachments", attachmentHandler.Upload)
+				r.Put("/custom-fields/{fieldId}", customFieldHandler.SetCardValue)
+			})
+
+			r.Route("/custom-fields/{fieldId}", func(r chi.Router) {
+				r.Patch("/", customFieldHandler.Update)
+				r.Delete("/", customFieldHandler.Delete)
 			})
 
 			r.Route("/attachments/{attachmentId}", func(r chi.Router) {

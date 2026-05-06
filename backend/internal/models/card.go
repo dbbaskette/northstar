@@ -6,6 +6,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// CustomFieldValue mirrors repository.CustomFieldValue but in models so
+// it's importable without a cycle. Populated on card detail responses.
+type CustomFieldValue struct {
+	FieldDefID string  `json:"field_def_id"`
+	Text       string  `json:"value_text,omitempty"`
+	Number     float64 `json:"value_number,omitempty"`
+	Date       string  `json:"value_date,omitempty"`
+	Bool       bool    `json:"value_bool,omitempty"`
+}
+
 type Card struct {
 	ID                pgtype.UUID        `json:"id"`
 	ListID            pgtype.UUID        `json:"list_id"`
@@ -28,6 +38,7 @@ type Card struct {
 	Comments          []Comment          `json:"comments,omitempty"`
 	Checklists        []Checklist        `json:"checklists,omitempty"`
 	Attachments       []Attachment       `json:"attachments,omitempty"`
+	CustomFields      []CustomFieldValue `json:"custom_fields,omitempty"`
 
 	// Aggregate counts (used on the board view, not the full card detail)
 	ChecklistTotal  int `json:"checklist_total,omitempty"`
