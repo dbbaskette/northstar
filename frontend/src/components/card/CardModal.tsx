@@ -24,6 +24,7 @@ import type { Board, CardPriority } from '@/api/boards'
 import { useCreateLabel } from '@/api/labels'
 import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
+import Markdown from '../ui/Markdown'
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -335,8 +336,9 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={4}
-                    className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    rows={6}
+                    placeholder="Markdown supported: **bold**, *italic*, `code`, [link](url), - lists"
+                    className="w-full rounded-lg border border-gray-300 p-2 font-mono text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     autoFocus
                   />
                   <div className="flex gap-2">
@@ -360,9 +362,13 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
               ) : (
                 <button
                   onClick={() => setEditingDesc(true)}
-                  className="w-full rounded-lg bg-gray-50 p-3 text-left text-sm text-gray-600 hover:bg-gray-100"
+                  className="w-full cursor-text rounded-lg bg-gray-50 p-3 text-left text-sm text-gray-600 hover:bg-gray-100"
                 >
-                  {description || 'Add a more detailed description...'}
+                  {description ? (
+                    <Markdown source={description} />
+                  ) : (
+                    <span className="italic text-gray-400">Add a more detailed description… (Markdown supported)</span>
+                  )}
                 </button>
               )}
             </div>
@@ -475,7 +481,7 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                             {new Date(c.created_at).toLocaleString()}
                           </span>
                         </div>
-                        <div className="text-gray-800">{c.body}</div>
+                        <Markdown source={c.body} className="text-gray-800" />
                       </div>
                       <button
                         onClick={() => deleteComment.mutate(c.id)}
