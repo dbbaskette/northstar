@@ -6,6 +6,7 @@ import ProfilePage from './pages/ProfilePage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
 import AdminAuditLogPage from './pages/AdminAuditLogPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import AdminPluginsPage from './pages/AdminPluginsPage'
 import SecurityPage from './pages/SecurityPage'
 import AppShell from './components/layout/AppShell'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/security" element={<SecurityPage />} />
           <Route path="/admin/audit-log" element={<AdminAuditLogPage />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/plugins" element={<AdminPluginsPage />} />
         </Route>
       </Route>
     </Routes>

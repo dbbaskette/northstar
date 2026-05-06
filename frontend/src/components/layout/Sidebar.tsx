@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LayoutDashboard, Lock, Star, Plus, Users, ShieldCheck, UserCog } from 'lucide-react'
+import { LayoutDashboard, Lock, Star, Plus, Plug, Users, ShieldCheck, UserCog } from 'lucide-react'
 import { useTeams } from '@/api/teams'
 import { useMe } from '@/api/users'
 import { useAppStore } from '@/stores/appStore'
@@ -70,6 +70,14 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
               >
                 <ShieldCheck className="h-4 w-4" />
                 Audit log
+              </Link>
+              <Link
+                to="/admin/plugins"
+                onClick={onNavigate}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <Plug className="h-4 w-4" />
+                Plugins
               </Link>
             </>
           )}

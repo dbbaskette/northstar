@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Lock, Users, X, Trash2, Link as LinkIcon, Copy, Check, Webhook as WebhookIcon } from 'lucide-react'
+import { Lock, Users, X, Trash2, Link as LinkIcon, Copy, Check, Webhook as WebhookIcon, Plug } from 'lucide-react'
 import {
   useAddBoardMember,
   useBoardMembers,
@@ -11,6 +11,12 @@ import { useToggleTemplate } from '@/api/templates'
 import { useCreateWebhook, useDeleteWebhook, useWebhooks } from '@/api/webhooks'
 import { useUsers } from '@/api/users'
 import { useUpdateStaleThreshold, type Board } from '@/api/boards'
+import {
+  useBoardPlugins,
+  useDisableBoardPlugin,
+  useEnableBoardPlugin,
+  usePlugins,
+} from '@/api/plugins'
 import Avatar from '../ui/Avatar'
 
 interface Props {
@@ -33,6 +39,11 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
   const createWebhook = useCreateWebhook(board.id)
   const deleteWebhook = useDeleteWebhook(board.id)
   const updateStaleThreshold = useUpdateStaleThreshold(board.id)
+  const { data: registry = [] } = usePlugins()
+  const { data: enabledPlugins = [] } = useBoardPlugins(open ? board.id : null)
+  const enablePlugin = useEnableBoardPlugin(board.id)
+  const disablePlugin = useDisableBoardPlugin(board.id)
+  const enabledIds = new Set(enabledPlugins.map((p) => p.plugin_id))
   const [staleDraft, setStaleDraft] = useState<string>(
     String(board.stale_threshold_days || 14),
   )
@@ -369,6 +380,53 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
               </div>
             )}
           </section>
+
+          {registry.length > 0 && (
+            <section>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <Plug className="h-3.5 w-3.5" />
+                  Plugins
+                </span>
+              </div>
+              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                Enable workspace plugins on this board. Each plugin renders its own iframe in
+                the board sidebar.
+              </p>
+              <ul className="space-y-1.5">
+                {registry.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 rounded-md border border-gray-200 px-2 py-1.5 text-xs dark:border-gray-700"
+                  >
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                        {p.name} <span className="text-gray-500">v{p.version}</span>
+                      </div>
+                      {p.description && (
+                        <div className="text-gray-500">{p.description}</div>
+                      )}
+                    </div>
+                    {enabledIds.has(p.id) ? (
+                      <button
+                        onClick={() => disablePlugin.mutate(p.id)}
+                        className="rounded-md bg-gray-100 px-2 py-1 font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200"
+                      >
+                        Disable
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => enablePlugin.mutate(p.id)}
+                        className="rounded-md bg-blue-600 px-2 py-1 font-medium text-white hover:bg-blue-700"
+                      >
+                        Enable
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {isPrivate && (
             <section>

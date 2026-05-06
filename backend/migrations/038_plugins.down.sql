@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS board_plugins;
+DROP TABLE IF EXISTS plugins;

@@ -80,6 +80,7 @@ func main() {
 	cardLinkRepo := repository.NewCardLinkRepo(pool)
 	sessionRepo := repository.NewSessionRepo(pool)
 	twofaRepo := repository.NewTwoFARepo(pool)
+	pluginRepo := repository.NewPluginRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -135,6 +136,7 @@ func main() {
 	voteHandler := handler.NewVoteHandler(voteRepo)
 	cardLinkHandler := handler.NewCardLinkHandler(cardLinkRepo)
 	securityHandler := handler.NewSecurityHandler(sessionRepo, twofaRepo, userRepo, cfg.JWTSecret)
+	pluginHandler := handler.NewPluginHandler(pluginRepo, boardRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -180,6 +182,10 @@ func main() {
 				r.Patch("/admin/users/{userId}", adminUserHandler.Update)
 				r.Post("/admin/users/{userId}/revoke-sessions", adminUserHandler.RevokeSessions)
 				r.Post("/admin/users/bulk-role", adminUserHandler.BulkRole)
+
+				r.Get("/admin/plugins", pluginHandler.List)
+				r.Post("/admin/plugins", pluginHandler.Register)
+				r.Delete("/admin/plugins/{pluginId}", pluginHandler.Unregister)
 			})
 
 			r.Get("/auth/me", authHandler.Me)
@@ -266,6 +272,9 @@ func main() {
 				r.Post("/automations", automationHandler.Create)
 				r.Get("/activity", activityHandler.ListByBoard)
 				r.Get("/reports", reportHandler.Board)
+				r.Get("/plugins", pluginHandler.ListForBoard)
+				r.Post("/plugins/{pluginId}", pluginHandler.Enable)
+				r.Delete("/plugins/{pluginId}", pluginHandler.Disable)
 				r.Get("/archived", archiveHandler.ListArchived)
 			})
 

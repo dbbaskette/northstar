@@ -7,6 +7,7 @@ import BoardView from '@/components/board/BoardView'
 import BoardCalendarView from '@/components/board/BoardCalendarView'
 import BoardTimelineView from '@/components/board/BoardTimelineView'
 import BoardReportsView from '@/components/board/BoardReportsView'
+import BoardPluginsPanel from '@/components/board/BoardPluginsPanel'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import BoardSharingModal from '@/components/board/BoardSharingModal'
 import AutomationsModal from '@/components/board/AutomationsModal'
@@ -196,6 +197,7 @@ export default function BoardPage() {
         {showActivity && (
           <aside className="w-80 overflow-y-auto border-l border-black/10 bg-white/95 backdrop-blur">
             <ActivityFeed boardId={board.id} />
+            <BoardPluginsPanel boardId={board.id} />
           </aside>
         )}
       </div>
