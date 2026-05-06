@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -19,9 +19,10 @@ import {
 } from '@dnd-kit/sortable'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Board, BoardCard, BoardList } from '@/api/boards'
-import { useMoveCard, useReorderCard } from '@/api/cards'
+import { useDeleteCard, useMoveCard, useReorderCard } from '@/api/cards'
 import { useReorderList } from '@/api/lists'
 import { calculatePosition } from '@/lib/utils'
+import { hotkeysBus, useHotkey } from '@/hooks/useHotkeys'
 import SortableListColumn from './SortableListColumn'
 import CardItem from '../card/CardItem'
 import AddList from '../list/AddList'
@@ -41,6 +42,32 @@ export default function BoardView({ board, onCardClick, filter }: Props) {
   const moveCard = useMoveCard(board.id)
   const reorderCard = useReorderCard(board.id)
   const reorderList = useReorderList(board.id)
+  const deleteCard = useDeleteCard(board.id)
+
+  // Track which list/card the cursor is over for `n` and `c` shortcuts.
+  // We re-read on each keypress (inside the handler), so refs are fine.
+  const hoveredListRef = useRef<string | null>(null)
+  const hoveredCardRef = useRef<string | null>(null)
+
+  const handlePointerOver = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement
+    const listEl = target.closest('[data-list-id]') as HTMLElement | null
+    const cardEl = target.closest('[data-card-id]') as HTMLElement | null
+    hoveredListRef.current = listEl?.dataset.listId ?? null
+    hoveredCardRef.current = cardEl?.dataset.cardId ?? null
+  }
+
+  useHotkey('n', () => {
+    const listId = hoveredListRef.current
+    if (listId) hotkeysBus.emit('add-card', { listId })
+  })
+  useHotkey('c', () => {
+    const cardId = hoveredCardRef.current
+    if (!cardId) return
+    if (confirm('Archive this card?')) {
+      deleteCard.mutate(cardId)
+    }
+  })
 
   useEffect(() => {
     setLists(board.lists || [])
@@ -198,7 +225,10 @@ export default function BoardView({ board, onCardClick, filter }: Props) {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex flex-1 gap-4 overflow-x-auto p-6">
+      <div
+        className="flex flex-1 gap-4 overflow-x-auto p-6"
+        onPointerOver={handlePointerOver}
+      >
         <SortableContext items={listIds} strategy={horizontalListSortingStrategy}>
           {displayLists.map((list) => (
             <SortableListColumn

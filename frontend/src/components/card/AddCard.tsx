@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useCreateCard } from '@/api/cards'
+import { hotkeysBus } from '@/hooks/useHotkeys'
 
 interface Props {
   boardId: string
@@ -11,6 +12,12 @@ export default function AddCard({ boardId, listId }: Props) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState('')
   const createCard = useCreateCard(boardId)
+
+  useEffect(() => {
+    return hotkeysBus.on<{ listId: string }>('add-card', (detail) => {
+      if (detail?.listId === listId) setEditing(true)
+    })
+  }, [listId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

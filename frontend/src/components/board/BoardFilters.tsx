@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Filter, X } from 'lucide-react'
 import type { Board, BoardCard, BoardLabel, CardPriority } from '@/api/boards'
 import { PRIORITY_COLORS, PRIORITY_LABELS, PRIORITY_ORDER, cardCompletedAt, cardDueDate, cardPriority } from '@/lib/cardHelpers'
+import { hotkeysBus } from '@/hooks/useHotkeys'
 
 export interface FilterState {
   priorities: CardPriority[]
@@ -28,6 +29,20 @@ interface Props {
 export default function BoardFilters({ board, onChange }: Props) {
   const [params, setParams] = useSearchParams()
   const [open, setOpen] = useState(false)
+  const textInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const offToggle = hotkeysBus.on('toggle-filters', () => setOpen((v) => !v))
+    const offFocus = hotkeysBus.on('focus-search', () => {
+      setOpen(true)
+      // Wait for the popover to mount before focusing.
+      requestAnimationFrame(() => textInputRef.current?.focus())
+    })
+    return () => {
+      offToggle()
+      offFocus()
+    }
+  }, [])
 
   const filter: FilterState = {
     priorities: parseList(params.get('priority')) as CardPriority[],
@@ -190,6 +205,7 @@ export default function BoardFilters({ board, onChange }: Props) {
             <FilterSection label="Title contains">
               <div className="relative">
                 <input
+                  ref={textInputRef}
                   type="text"
                   value={filter.text}
                   onChange={(e) => updateParam('text', e.target.value)}

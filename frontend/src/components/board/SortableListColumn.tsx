@@ -47,6 +47,7 @@ export default function SortableListColumn({ boardId, list, onCardClick }: Props
   return (
     <div
       ref={setNodeRef}
+      data-list-id={list.id}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,

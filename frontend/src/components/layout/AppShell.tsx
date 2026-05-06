@@ -1,10 +1,17 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import KeyboardShortcutsHelp from '../ui/KeyboardShortcutsHelp'
+import { useHotkey, useHotkeySequence } from '@/hooks/useHotkeys'
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const navigate = useNavigate()
+
+  useHotkey('?', () => setHelpOpen((v) => !v))
+  useHotkeySequence(['g', 'd'], () => navigate('/dashboard'))
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -28,6 +35,7 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
+      <KeyboardShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
 }

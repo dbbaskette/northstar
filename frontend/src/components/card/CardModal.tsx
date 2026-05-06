@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   X,
   AlignLeft,
@@ -44,6 +44,7 @@ import {
   cardDueDate,
   cardPriority,
 } from '@/lib/cardHelpers'
+import { useHotkey } from '@/hooks/useHotkeys'
 
 interface Props {
   open: boolean
@@ -78,6 +79,12 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
   const [copyMoveMode, setCopyMoveMode] = useState<'copy' | 'move' | null>(null)
   const [newLabelName, setNewLabelName] = useState('')
   const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0]!)
+  const dueDateInputRef = useRef<HTMLInputElement>(null)
+
+  const cardOpen = open && !!cardId
+  useHotkey('e', () => setEditingDesc(true), { enabled: cardOpen })
+  useHotkey('l', () => setShowLabelPicker((v) => !v), { enabled: cardOpen })
+  useHotkey('d', () => dueDateInputRef.current?.focus(), { enabled: cardOpen })
 
   useEffect(() => {
     if (card) {
@@ -301,6 +308,7 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                 </div>
                 <div className="flex items-center gap-2">
                   <input
+                    ref={dueDateInputRef}
                     type="date"
                     value={dueDateInputValue}
                     onChange={(e) => handleSetDueDate(e.target.value)}

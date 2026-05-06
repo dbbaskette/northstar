@@ -34,6 +34,7 @@ export default function SortableCard({ card, onCardClick }: Props) {
   return (
     <div
       ref={setNodeRef}
+      data-card-id={card.id}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,

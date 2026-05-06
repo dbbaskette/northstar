@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, Zap } from 'lucide-react'
 import { useBoard, useCopyBoard } from '@/api/boards'
+import { hotkeysBus, useHotkey } from '@/hooks/useHotkeys'
 import BoardView from '@/components/board/BoardView'
 import BoardCalendarView from '@/components/board/BoardCalendarView'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
@@ -27,6 +28,16 @@ export default function BoardPage() {
   const copyBoard = useCopyBoard()
 
   useBoardWebSocket(boardId || null)
+
+  useHotkey('f', () => hotkeysBus.emit('toggle-filters'))
+  useHotkey('meta+k', (e) => {
+    e.preventDefault()
+    hotkeysBus.emit('focus-search')
+  })
+  useHotkey('ctrl+k', (e) => {
+    e.preventDefault()
+    hotkeysBus.emit('focus-search')
+  })
 
   if (isLoading) {
     return <div className="p-6 text-sm text-gray-500">Loading board...</div>
