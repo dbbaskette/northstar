@@ -45,6 +45,47 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*models.User,
 	return u, err
 }
 
+// FindByExternalID returns the user already linked to the given SSO
+// (provider, external user ID) tuple, or pgx.ErrNoRows.
+func (r *UserRepo) FindByExternalID(ctx context.Context, provider, externalID string) (*models.User, error) {
+	const q = `
+		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, created_at, updated_at
+		FROM users WHERE external_provider = $1 AND external_id = $2`
+
+	u := &models.User{}
+	err := r.pool.QueryRow(ctx, q, provider, externalID).Scan(
+		&u.ID, &u.Email, &u.Username, &u.PasswordHash,
+		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, fmt.Errorf("user not found")
+	}
+	return u, err
+}
+
+// LinkExternalID attaches an SSO identity to an existing user (by ID).
+// Used when an SSO login matches an existing email but the user signed
+// up with a password.
+func (r *UserRepo) LinkExternalID(ctx context.Context, userID, provider, externalID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE users SET external_provider = $2, external_id = $3 WHERE id = $1`,
+		userID, provider, externalID,
+	)
+	return err
+}
+
+// CreateExternalUser creates a user that authenticates only via SSO —
+// password_hash stays empty string.
+func (r *UserRepo) CreateExternalUser(ctx context.Context, u *models.User, provider, externalID string) error {
+	const q = `
+		INSERT INTO users (email, username, password_hash, display_name, role, external_provider, external_id)
+		VALUES ($1, $2, '', $3, $4, $5, $6)
+		RETURNING id, created_at, updated_at`
+	return r.pool.QueryRow(ctx, q,
+		u.Email, u.Username, u.DisplayName, u.Role, provider, externalID,
+	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
+}
+
 func (r *UserRepo) FindByID(ctx context.Context, id string) (*models.User, error) {
 	const q = `
 		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, created_at, updated_at

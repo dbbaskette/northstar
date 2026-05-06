@@ -1,9 +1,14 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Star } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Star, Github } from 'lucide-react'
+import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 
 type Mode = 'login' | 'register'
+
+interface SSOProviders {
+  github?: boolean
+}
 
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('login')
@@ -13,9 +18,46 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [providers, setProviders] = useState<SSOProviders>({})
   const login = useAuthStore((s) => s.login)
   const register = useAuthStore((s) => s.register)
+  const hydrate = useAuthStore((s) => s.hydrateFromAccessToken)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Surface backend ?error=... query string set by the SSO callback.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const e = params.get('error')
+    if (e) setError(decodeURIComponent(e))
+  }, [location.search])
+
+  // Capture tokens that arrive in the URL fragment after an SSO redirect.
+  useEffect(() => {
+    if (!location.hash || !location.hash.includes('access_token=')) return
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''))
+    const access = hash.get('access_token')
+    const returnTo = hash.get('return_to') || '/dashboard'
+    if (!access) return
+    ;(async () => {
+      try {
+        await hydrate(access)
+        // Clear the fragment before navigating so refreshing doesn't replay it.
+        window.history.replaceState({}, '', '/login')
+        navigate(returnTo, { replace: true })
+      } catch (err) {
+        console.error('SSO hydrate failed', err)
+        setError('Could not complete SSO sign-in.')
+      }
+    })()
+  }, [location.hash, hydrate, navigate])
+
+  useEffect(() => {
+    axios
+      .get('/api/v1/auth/sso/providers')
+      .then((res) => setProviders(res.data || {}))
+      .catch(() => setProviders({}))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,6 +103,8 @@ export default function LoginPage() {
     setError('')
   }
 
+  const ssoEnabled = providers.github
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800 dark:shadow-2xl">
@@ -72,6 +116,24 @@ export default function LoginPage() {
         <h2 className="mb-6 text-center text-lg font-semibold text-gray-700 dark:text-gray-300">
           {mode === 'login' ? 'Sign in to your account' : 'Create your account'}
         </h2>
+
+        {ssoEnabled && (
+          <div className="mb-6 space-y-2">
+            {providers.github && (
+              <a
+                href="/api/v1/auth/github/start?return_to=/dashboard"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+              >
+                <Github className="h-4 w-4" />
+                Continue with GitHub
+              </a>
+            )}
+            <div className="relative my-3 text-center text-xs text-gray-500">
+              <span className="absolute left-0 top-1/2 h-px w-full bg-gray-200 dark:bg-gray-700" />
+              <span className="relative bg-white px-2 dark:bg-gray-800">or</span>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

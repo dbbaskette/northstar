@@ -10,6 +10,9 @@ interface AuthState {
   refresh: () => Promise<void>
   logout: () => void
   setAuth: (token: string, user: AuthState['user']) => void
+  // Used by the SSO callback flow: hash-borne access token, fetch the
+  // user record fresh, mark authenticated.
+  hydrateFromAccessToken: (token: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -48,4 +51,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => set({ accessToken: null, user: null, isAuthenticated: false }),
+
+  hydrateFromAccessToken: async (token) => {
+    const res = await axios.get('/api/v1/users/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    set({
+      accessToken: token,
+      user: res.data,
+      isAuthenticated: true,
+    })
+  },
 }))

@@ -94,6 +94,10 @@ func main() {
 	cardCopier := service.NewCardCopier(pool)
 	boardCopier := service.NewBoardCopier(pool)
 	authService := service.NewAuthService(userRepo, pool, cfg.JWTSecret)
+	githubOAuth := service.NewGitHubOAuth(
+		cfg.GitHubClientID, cfg.GitHubClientSecret, cfg.BaseURL, cfg.JWTSecret,
+		userRepo, authService,
+	)
 
 	authHandler := handler.NewAuthHandler(authService, auditRepo)
 	teamHandler := handler.NewTeamHandler(teamRepo, auditRepo)
@@ -119,6 +123,7 @@ func main() {
 	webhookHandler := handler.NewWebhookHandler(webhookRepo, boardRepo)
 	automationHandler := handler.NewAutomationHandler(automationRepo, boardRepo)
 	auditHandler := handler.NewAuditHandler(auditRepo)
+	ssoHandler := handler.NewSSOHandler(githubOAuth, auditRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -145,6 +150,9 @@ func main() {
 		r.Post("/auth/register", authHandler.Register)
 		r.Post("/auth/login", authHandler.Login)
 		r.Post("/auth/refresh", authHandler.Refresh)
+		r.Get("/auth/sso/providers", ssoHandler.Providers)
+		r.Get("/auth/github/start", ssoHandler.GitHubStart)
+		r.Get("/auth/github/callback", ssoHandler.GitHubCallback)
 
 		r.Get("/invites/{token}", inviteHandler.Preview)
 		r.Get("/ws", wsHandler.Connect)

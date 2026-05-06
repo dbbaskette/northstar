@@ -13,6 +13,10 @@ type Config struct {
 	JWTSecret   string
 	LogLevel    string
 	StoragePath string
+	BaseURL     string
+
+	GitHubClientID     string
+	GitHubClientSecret string
 }
 
 func Load() (*Config, error) {
@@ -50,6 +54,10 @@ func Load() (*Config, error) {
 	if cfg.DatabaseURL == "" {
 		cfg.DatabaseURL = "postgres://northstar:northstar@localhost:5432/northstar?sslmode=disable"
 	}
+
+	cfg.BaseURL = os.Getenv("BASE_URL") // e.g. https://northstar.example.com
+	cfg.GitHubClientID = os.Getenv("GITHUB_CLIENT_ID")
+	cfg.GitHubClientSecret = os.Getenv("GITHUB_CLIENT_SECRET")
 
 	return cfg, nil
 }
