@@ -72,6 +72,7 @@ func main() {
 	customFieldRepo := repository.NewCustomFieldRepo(pool)
 	watcherRepo := repository.NewWatcherRepo(pool)
 	reminderRepo := repository.NewReminderRepo(pool)
+	webhookRepo := repository.NewWebhookRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -82,7 +83,9 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
-	events := service.NewEvents(activityRepo, notifRepo, watcherRepo, hub)
+	webhookDispatcher := service.NewWebhookDispatcher(webhookRepo)
+	go webhookDispatcher.Run(context.Background(), 10*time.Second)
+	events := service.NewEvents(activityRepo, notifRepo, watcherRepo, hub, webhookDispatcher)
 	mentions := service.NewMentions(pool)
 	cardCopier := service.NewCardCopier(pool)
 	boardCopier := service.NewBoardCopier(pool)
@@ -109,6 +112,7 @@ func main() {
 	templateHandler := handler.NewTemplateHandler(pool, boardRepo, teamRepo, boardCopier)
 	watcherHandler := handler.NewWatcherHandler(watcherRepo)
 	reminderHandler := handler.NewReminderHandler(reminderRepo)
+	webhookHandler := handler.NewWebhookHandler(webhookRepo, boardRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -208,6 +212,8 @@ func main() {
 				r.Post("/labels", labelHandler.Create)
 				r.Get("/custom-fields", customFieldHandler.List)
 				r.Post("/custom-fields", customFieldHandler.Create)
+				r.Get("/webhooks", webhookHandler.List)
+				r.Post("/webhooks", webhookHandler.Create)
 				r.Get("/activity", activityHandler.ListByBoard)
 				r.Get("/archived", archiveHandler.ListArchived)
 			})
@@ -247,6 +253,11 @@ func main() {
 			})
 
 			r.Delete("/reminders/{reminderId}", reminderHandler.Delete)
+
+			r.Route("/webhooks/{webhookId}", func(r chi.Router) {
+				r.Delete("/", webhookHandler.Delete)
+				r.Get("/deliveries", webhookHandler.Deliveries)
+			})
 
 			r.Route("/custom-fields/{fieldId}", func(r chi.Router) {
 				r.Patch("/", customFieldHandler.Update)

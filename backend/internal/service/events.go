@@ -15,6 +15,7 @@ type Events struct {
 	notifRepo    *repository.NotificationRepo
 	watcherRepo  *repository.WatcherRepo
 	hub          *ws.Hub
+	dispatcher   *WebhookDispatcher
 }
 
 func NewEvents(
@@ -22,12 +23,14 @@ func NewEvents(
 	notifRepo *repository.NotificationRepo,
 	watcherRepo *repository.WatcherRepo,
 	hub *ws.Hub,
+	dispatcher *WebhookDispatcher,
 ) *Events {
 	return &Events{
 		activityRepo: activityRepo,
 		notifRepo:    notifRepo,
 		watcherRepo:  watcherRepo,
 		hub:          hub,
+		dispatcher:   dispatcher,
 	}
 }
 
@@ -46,6 +49,9 @@ func (e *Events) Emit(
 		log.Warn().Err(err).Str("action", action).Msg("activity log failed")
 	}
 	e.hub.Broadcast(boardID, userID, action, payload)
+	if e.dispatcher != nil {
+		e.dispatcher.Enqueue(ctx, boardID, action, payload)
+	}
 }
 
 // Notify creates per-user notifications. Skips the actor (you don't

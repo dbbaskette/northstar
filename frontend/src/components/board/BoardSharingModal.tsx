@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Lock, Users, X, Trash2, Link as LinkIcon, Copy, Check } from 'lucide-react'
+import { Lock, Users, X, Trash2, Link as LinkIcon, Copy, Check, Webhook as WebhookIcon } from 'lucide-react'
 import {
   useAddBoardMember,
   useBoardMembers,
@@ -8,6 +8,7 @@ import {
 } from '@/api/boardMembers'
 import { useCreateInvite, useDeleteInvite, useInvites } from '@/api/invites'
 import { useToggleTemplate } from '@/api/templates'
+import { useCreateWebhook, useDeleteWebhook, useWebhooks } from '@/api/webhooks'
 import { useUsers } from '@/api/users'
 import type { Board } from '@/api/boards'
 import Avatar from '../ui/Avatar'
@@ -28,6 +29,11 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
   const createInvite = useCreateInvite(board.id)
   const deleteInvite = useDeleteInvite(board.id)
   const toggleTemplate = useToggleTemplate(board.id)
+  const { data: webhooks = [] } = useWebhooks(open ? board.id : null)
+  const createWebhook = useCreateWebhook(board.id)
+  const deleteWebhook = useDeleteWebhook(board.id)
+  const [newWebhookUrl, setNewWebhookUrl] = useState('')
+  const [showWebhookSecret, setShowWebhookSecret] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
 
@@ -212,6 +218,90 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Templates show up under "My templates" when creating a new board.
             </p>
+          </section>
+
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <WebhookIcon className="h-3.5 w-3.5" />
+                Webhooks
+              </span>
+            </div>
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+              POST every board event to a URL. Payloads are signed with{' '}
+              <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">X-Northstar-Signature</code>.
+            </p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                if (!newWebhookUrl.trim()) return
+                const created = await createWebhook.mutateAsync({ url: newWebhookUrl.trim() })
+                setNewWebhookUrl('')
+                setShowWebhookSecret(created.secret)
+              }}
+              className="mb-3 flex gap-2"
+            >
+              <input
+                type="url"
+                value={newWebhookUrl}
+                onChange={(e) => setNewWebhookUrl(e.target.value)}
+                placeholder="https://example.com/webhook"
+                className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <button
+                type="submit"
+                disabled={!newWebhookUrl.trim() || createWebhook.isPending}
+                className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                Add
+              </button>
+            </form>
+            {showWebhookSecret && (
+              <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs dark:border-amber-700 dark:bg-amber-900/30">
+                <div className="mb-1 font-semibold text-amber-800 dark:text-amber-200">
+                  Signing secret — copy this now
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={showWebhookSecret}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="flex-1 rounded bg-white px-2 py-1 font-mono text-xs text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                  />
+                  <button
+                    onClick={() => setShowWebhookSecret(null)}
+                    className="rounded px-2 text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-800"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+            {webhooks.length === 0 ? (
+              <div className="text-xs text-gray-400">No webhooks configured.</div>
+            ) : (
+              <div className="space-y-1.5">
+                {webhooks.map((wh) => (
+                  <div
+                    key={wh.id}
+                    className="flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1.5 text-xs dark:border-gray-700"
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${wh.active ? 'bg-green-500' : 'bg-gray-300'}`}
+                    />
+                    <span className="flex-1 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+                      {wh.url}
+                    </span>
+                    <button
+                      onClick={() => deleteWebhook.mutate(wh.id)}
+                      className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-700"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {isPrivate && (
