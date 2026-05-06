@@ -36,6 +36,7 @@ import CardReminders from './CardReminders'
 import Markdown from '../ui/Markdown'
 import Avatar from '../ui/Avatar'
 import WatchToggle from '../ui/WatchToggle'
+import { usePresence, useTypingIndicator, useTypingNotifier } from '@/hooks/usePresence'
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -87,6 +88,13 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
   useHotkey('e', () => setEditingDesc(true), { enabled: cardOpen })
   useHotkey('l', () => setShowLabelPicker((v) => !v), { enabled: cardOpen })
   useHotkey('d', () => dueDateInputRef.current?.focus(), { enabled: cardOpen })
+
+  const presenceUsers = usePresence('card', cardOpen ? cardId : null)
+  const typers = useTypingIndicator('card', cardOpen ? cardId : null, me?.id)
+  const typingNotifier = useTypingNotifier('card', cardOpen ? cardId : null)
+  // Filter the presence list down to *other* viewers — the modal header
+  // is for "who else is here", not "include me".
+  const otherViewers = presenceUsers.filter((u) => u.user_id !== me?.id)
 
   useEffect(() => {
     if (card) {
@@ -187,6 +195,7 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
     if (!comment.trim()) return
     await addComment.mutateAsync(comment.trim())
     setComment('')
+    typingNotifier.stop()
   }
 
   const handleDelete = async () => {
@@ -272,6 +281,31 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
             </div>
           </div>
           <div className="ml-4 flex items-center gap-2">
+            {otherViewers.length > 0 && (
+              <div
+                className="flex -space-x-2"
+                title={`Also viewing: ${otherViewers.map((u) => u.display_name).join(', ')}`}
+                aria-label={`${otherViewers.length} other viewer${otherViewers.length > 1 ? 's' : ''}`}
+              >
+                {otherViewers.slice(0, 4).map((u) => (
+                  <span key={u.user_id} className="ring-2 ring-white dark:ring-gray-800 rounded-full">
+                    <Avatar
+                      user={{
+                        id: u.user_id,
+                        display_name: u.display_name || '?',
+                        avatar_url: u.avatar_url || null,
+                      }}
+                      size="sm"
+                    />
+                  </span>
+                ))}
+                {otherViewers.length > 4 && (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-[10px] font-medium text-gray-600 ring-2 ring-white dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-800">
+                    +{otherViewers.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
             <WatchToggle targetType="card" targetID={cardId} label />
             <button
               onClick={onClose}
@@ -539,11 +573,15 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                 <MessageSquare className="h-4 w-4" />
                 Comments
               </div>
-              <form onSubmit={handleAddComment} className="mb-4 flex gap-2">
+              <form onSubmit={handleAddComment} className="mb-2 flex gap-2">
                 <input
                   type="text"
                   value={comment}
-                  onChange={(e) => setComment(e.target.value)}
+                  onChange={(e) => {
+                    setComment(e.target.value)
+                    if (e.target.value) typingNotifier.notify()
+                    else typingNotifier.stop()
+                  }}
                   aria-label="Comment text"
                   placeholder="Write a comment..."
                   className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
@@ -556,6 +594,15 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                   Post
                 </button>
               </form>
+              {typers.length > 0 && (
+                <div className="mb-3 text-xs italic text-gray-500" aria-live="polite">
+                  {typers.length === 1
+                    ? `${typers[0]!.name || 'Someone'} is typing…`
+                    : typers.length === 2
+                      ? `${typers[0]!.name} and ${typers[1]!.name} are typing…`
+                      : `${typers[0]!.name}, ${typers[1]!.name} and ${typers.length - 2} others are typing…`}
+                </div>
+              )}
               <div className="space-y-3">
                 {(card.comments || []).map((c) => (
                   <div key={c.id} className="flex gap-3">

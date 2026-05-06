@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/dbbaskette/northstar/internal/repository"
 	"github.com/dbbaskette/northstar/internal/service"
 	"github.com/dbbaskette/northstar/internal/ws"
 )
@@ -12,13 +13,15 @@ import (
 type WSHandler struct {
 	hub         *ws.Hub
 	authService *service.AuthService
+	userRepo    *repository.UserRepo
 	upgrader    websocket.Upgrader
 }
 
-func NewWSHandler(hub *ws.Hub, authService *service.AuthService) *WSHandler {
+func NewWSHandler(hub *ws.Hub, authService *service.AuthService, userRepo *repository.UserRepo) *WSHandler {
 	return &WSHandler{
 		hub:         hub,
 		authService: authService,
+		userRepo:    userRepo,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -48,12 +51,23 @@ func (h *WSHandler) Connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	displayName := ""
+	avatarURL := ""
+	if h.userRepo != nil {
+		if u, err := h.userRepo.FindByID(r.Context(), userID); err == nil && u != nil {
+			displayName = u.DisplayName
+			if u.AvatarURL.Valid {
+				avatarURL = u.AvatarURL.String
+			}
+		}
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 
-	client := ws.NewClient(h.hub, conn, boardID, userID)
+	client := ws.NewClient(h.hub, conn, boardID, userID, displayName, avatarURL)
 	h.hub.Register(client)
 
 	go client.WritePump()

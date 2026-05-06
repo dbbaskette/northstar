@@ -15,20 +15,24 @@ const (
 )
 
 type Client struct {
-	hub     *Hub
-	conn    *websocket.Conn
-	send    chan []byte
-	boardID string
-	userID  string
+	hub         *Hub
+	conn        *websocket.Conn
+	send        chan []byte
+	boardID     string
+	userID      string
+	displayName string
+	avatarURL   string
 }
 
-func NewClient(hub *Hub, conn *websocket.Conn, boardID, userID string) *Client {
+func NewClient(hub *Hub, conn *websocket.Conn, boardID, userID, displayName, avatarURL string) *Client {
 	return &Client{
-		hub:     hub,
-		conn:    conn,
-		send:    make(chan []byte, sendBufferSize),
-		boardID: boardID,
-		userID:  userID,
+		hub:         hub,
+		conn:        conn,
+		send:        make(chan []byte, sendBufferSize),
+		boardID:     boardID,
+		userID:      userID,
+		displayName: displayName,
+		avatarURL:   avatarURL,
 	}
 }
 
@@ -46,9 +50,12 @@ func (c *Client) ReadPump() {
 	})
 
 	for {
-		_, _, err := c.conn.ReadMessage()
+		_, raw, err := c.conn.ReadMessage()
 		if err != nil {
 			break
+		}
+		if len(raw) > 0 {
+			c.hub.Inbound(c, raw)
 		}
 	}
 }

@@ -110,7 +110,7 @@ func main() {
 	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events, mentions)
 	labelHandler := handler.NewLabelHandler(labelRepo, cardRepo, listRepo, reminderRepo, events)
 	activityHandler := handler.NewActivityHandler(activityRepo)
-	wsHandler := handler.NewWSHandler(hub, authService)
+	wsHandler := handler.NewWSHandler(hub, authService, userRepo)
 	checklistHandler := handler.NewChecklistHandler(checklistRepo, cardRepo, listRepo, events)
 	attachmentHandler := handler.NewAttachmentHandler(attachmentRepo, cardRepo, listRepo, store, events)
 	archiveHandler := handler.NewArchiveHandler(cardRepo, listRepo, events)

@@ -1,6 +1,7 @@
-import { Calendar, Check, CheckSquare, Paperclip, ThumbsUp } from 'lucide-react'
+import { Calendar, Check, CheckSquare, Paperclip, ThumbsUp, Eye } from 'lucide-react'
 import type { BoardCard } from '@/api/boards'
 import { useVoteCard } from '@/api/cards'
+import { useCardViewerCount } from '@/hooks/usePresence'
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -22,6 +23,7 @@ interface Props {
 
 export default function CardItem({ card, onClick, isDragging, staleThresholdDays, boardId }: Props) {
   const voteCard = useVoteCard(boardId || '')
+  const viewerCount = useCardViewerCount(card.id)
   const priority = cardPriority(card)
   const dueDate = cardDueDate(card)
   const completedAt = cardCompletedAt(card)
@@ -172,6 +174,16 @@ export default function CardItem({ card, onClick, isDragging, staleThresholdDays
             >
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               {staleDays}d
+            </span>
+          )}
+          {viewerCount > 0 && (
+            <span
+              className="inline-flex items-center gap-1 rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200"
+              title={`${viewerCount} ${viewerCount === 1 ? 'person is' : 'people are'} viewing this card`}
+              aria-label={`${viewerCount} active viewer${viewerCount > 1 ? 's' : ''}`}
+            >
+              <Eye className="h-3 w-3" />
+              {viewerCount}
             </span>
           )}
           {boardId && (
