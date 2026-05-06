@@ -1,8 +1,8 @@
 ---
 applications:
 - name: northstar
-  memory: 256M
-  disk_quota: 128M
+  memory: 512M
+  disk_quota: 1024M
   instances: 1
   buildpacks:
   - binary_buildpack
@@ -10,7 +10,24 @@ applications:
   health-check-type: http
   health-check-http-endpoint: /health
   timeout: 60
+  stack: cflinuxfs4
   env:
     LOG_LEVEL: info
+    # Attachments live on the CF instance ephemeral disk. They're lost
+    # on restage / scale-to-zero — wire up an object store later if
+    # durable attachments matter.
+    STORAGE_PATH: /home/vcap/app/storage
   services:
   - northstar-db
+  # Required env vars (set via `cf set-env northstar <KEY> <VALUE>` then
+  # `cf restage northstar`):
+  #
+  #   JWT_SECRET            — long random hex string (used to sign access
+  #                           tokens AND HMAC the SSO state nonce).
+  #
+  # Optional:
+  #   BASE_URL              — e.g. https://northstar.apps.example.com.
+  #                           Required if you enable GitHub SSO so the
+  #                           OAuth callback URL is right.
+  #   GITHUB_CLIENT_ID      — turns on the "Sign in with GitHub" button.
+  #   GITHUB_CLIENT_SECRET

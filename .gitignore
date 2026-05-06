@@ -8,6 +8,12 @@ frontend/node_modules/
 frontend/dist/
 frontend/tsconfig.tsbuildinfo
 
+# Build output: frontend dist is copied here by `make build` and
+# embedded into the Go binary. Keep the directory but ignore its
+# contents — the .gitkeep stays committed.
+backend/internal/static/dist/*
+!backend/internal/static/dist/.gitkeep
+
 # Local attachment storage (default STORAGE_PATH)
 backend/storage/
 storage/

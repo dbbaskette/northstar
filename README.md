@@ -28,6 +28,30 @@ Open http://localhost:5273 in your browser.
 | `make test` | Run backend + frontend tests |
 | `make clean` | Remove build artifacts |
 
+## Deploy to Cloud Foundry
+
+One-time setup per space:
+
+```sh
+cf create-service postgres <plan-name> northstar-db   # `cf marketplace` to find your plan
+./deploy.sh
+cf set-env northstar JWT_SECRET "$(openssl rand -hex 32)"
+cf restage northstar
+```
+
+`deploy.sh` runs `make build` (which produces `northstar-linux-amd64` with the
+frontend embedded) and then `cf push`. The manifest binds `northstar-db`,
+mounts attachments at `/home/vcap/app/storage`, and exposes `/health`.
+
+Optional — turn on Sign in with GitHub:
+
+```sh
+cf set-env northstar BASE_URL https://<route>
+cf set-env northstar GITHUB_CLIENT_ID <id>
+cf set-env northstar GITHUB_CLIENT_SECRET <secret>
+cf restage northstar
+```
+
 ## Architecture
 
 - **Single binary deploy**: in production, the React build is embedded into the Go binary via `embed.FS`. One artifact, one process, one health check.

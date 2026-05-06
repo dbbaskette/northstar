@@ -1,0 +1,15 @@
+# cf push only needs the cross-compiled binary + manifest — keep
+# everything else out of the upload (saves minutes on every push).
+backend/
+frontend/
+docs/
+docker-compose.yml
+start.sh
+Makefile
+README.md
+.git/
+.github/
+.idea/
+.vscode/
+*.log
+storage/
