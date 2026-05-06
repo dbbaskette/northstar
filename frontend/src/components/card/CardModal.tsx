@@ -25,6 +25,7 @@ import { useCreateLabel } from '@/api/labels'
 import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
 import Markdown from '../ui/Markdown'
+import Avatar from '../ui/Avatar'
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -468,9 +469,20 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
               <div className="space-y-3">
                 {(card.comments || []).map((c) => (
                   <div key={c.id} className="flex gap-3">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                      {(c.user?.display_name || '?').charAt(0).toUpperCase()}
-                    </div>
+                    {c.user ? (
+                      <Avatar
+                        user={{
+                          id: c.user.id,
+                          display_name: c.user.display_name,
+                          avatar_url: c.user.avatar_url,
+                        }}
+                        size="md"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        ?
+                      </div>
+                    )}
                     <div className="flex-1">
                       <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
                         <div className="mb-1 flex items-center justify-between">

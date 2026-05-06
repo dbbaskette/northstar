@@ -31,13 +31,13 @@ func (r *UserRepo) Create(ctx context.Context, u *models.User) error {
 
 func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*models.User, error) {
 	const q = `
-		SELECT id, email, username, password_hash, display_name, avatar_url, role, created_at, updated_at
+		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, created_at, updated_at
 		FROM users WHERE email = $1`
 
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, q, email).Scan(
 		&u.ID, &u.Email, &u.Username, &u.PasswordHash,
-		&u.DisplayName, &u.AvatarURL, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -47,13 +47,13 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*models.User,
 
 func (r *UserRepo) FindByID(ctx context.Context, id string) (*models.User, error) {
 	const q = `
-		SELECT id, email, username, password_hash, display_name, avatar_url, role, created_at, updated_at
+		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, created_at, updated_at
 		FROM users WHERE id = $1`
 
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&u.ID, &u.Email, &u.Username, &u.PasswordHash,
-		&u.DisplayName, &u.AvatarURL, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -63,7 +63,7 @@ func (r *UserRepo) FindByID(ctx context.Context, id string) (*models.User, error
 
 func (r *UserRepo) List(ctx context.Context) ([]models.User, error) {
 	const q = `
-		SELECT id, email, username, display_name, avatar_url, role, created_at, updated_at
+		SELECT id, email, username, display_name, avatar_url, bio, timezone, role, created_at, updated_at
 		FROM users ORDER BY display_name`
 
 	rows, err := r.pool.Query(ctx, q)
@@ -77,11 +77,41 @@ func (r *UserRepo) List(ctx context.Context) ([]models.User, error) {
 		var u models.User
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.Username, &u.DisplayName,
-			&u.AvatarURL, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+			&u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
 		users = append(users, u)
 	}
 	return users, rows.Err()
+}
+
+type ProfileUpdate struct {
+	DisplayName string
+	Bio         string
+	Timezone    string
+	AvatarURL   *string
+}
+
+func (r *UserRepo) UpdateProfile(ctx context.Context, id string, p ProfileUpdate) error {
+	q := `
+		UPDATE users
+		SET display_name = $2,
+		    bio = $3,
+		    timezone = $4`
+	args := []interface{}{id, p.DisplayName, p.Bio, p.Timezone}
+	if p.AvatarURL != nil {
+		q += `, avatar_url = $5`
+		args = append(args, *p.AvatarURL)
+	}
+	q += ` WHERE id = $1`
+
+	ct, err := r.pool.Exec(ctx, q, args...)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
 }

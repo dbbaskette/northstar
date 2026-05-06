@@ -92,6 +92,7 @@ func main() {
 	attachmentHandler := handler.NewAttachmentHandler(attachmentRepo, cardRepo, listRepo, store, events)
 	archiveHandler := handler.NewArchiveHandler(cardRepo, listRepo, events)
 	searchHandler := handler.NewSearchHandler(searchRepo)
+	userHandler := handler.NewUserHandler(userRepo, store)
 
 	r := chi.NewRouter()
 
@@ -117,12 +118,21 @@ func main() {
 		r.Post("/auth/refresh", authHandler.Refresh)
 
 		r.Get("/ws", wsHandler.Connect)
+		r.Get("/avatars/{userId}", userHandler.DownloadAvatar)
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
 
 			r.Get("/auth/me", authHandler.Me)
 			r.Get("/search", searchHandler.Search)
+
+			r.Route("/users", func(r chi.Router) {
+				r.Get("/", userHandler.List)
+				r.Get("/me", userHandler.GetMe)
+				r.Patch("/me", userHandler.UpdateProfile)
+				r.Post("/me/avatar", userHandler.UploadAvatar)
+				r.Patch("/{userId}", userHandler.UpdateProfileForUser)
+			})
 
 			r.Route("/teams", func(r chi.Router) {
 				r.Post("/", teamHandler.Create)

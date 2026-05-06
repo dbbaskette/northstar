@@ -1,13 +1,28 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { LogOut, Search } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useMe } from '@/api/users'
+import Avatar from '../ui/Avatar'
 import SearchModal from '../search/SearchModal'
 import ThemeToggle from './ThemeToggle'
 
 export default function Header() {
-  const user = useAuthStore((s) => s.user)
+  const authUser = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
+  const { data: me } = useMe()
   const [searchOpen, setSearchOpen] = useState(false)
+
+  // Prefer the live profile (avatar updates immediately) over the stale auth user
+  const user = me
+    ? {
+        id: me.id,
+        display_name: me.display_name,
+        avatar_url: me.avatar_url,
+      }
+    : authUser
+      ? { id: authUser.id, display_name: authUser.displayName }
+      : null
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -36,7 +51,16 @@ export default function Header() {
 
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          {user && <span className="text-sm text-gray-600 dark:text-gray-300">{user.displayName}</span>}
+          {user && (
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Profile"
+            >
+              <Avatar user={user} size="sm" />
+              <span className="text-sm text-gray-700 dark:text-gray-200">{user.display_name}</span>
+            </Link>
+          )}
           <button
             onClick={logout}
             className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
