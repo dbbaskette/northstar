@@ -58,7 +58,7 @@ export default function SearchModal({ open, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl"
+        className="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3">

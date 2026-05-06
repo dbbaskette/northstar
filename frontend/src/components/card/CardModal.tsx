@@ -176,10 +176,10 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="my-8 w-full max-w-2xl rounded-xl bg-white shadow-xl"
+        className="my-8 w-full max-w-2xl rounded-xl bg-white shadow-xl dark:bg-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between border-b border-gray-200 p-6">
+        <div className="flex items-start justify-between border-b border-gray-200 p-6 dark:border-gray-700">
           <div className="flex flex-1 items-start gap-3">
             <button
               onClick={handleToggleComplete}

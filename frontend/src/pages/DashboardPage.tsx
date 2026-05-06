@@ -22,8 +22,8 @@ export default function DashboardPage() {
     return (
       <>
         <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">Welcome to Northstar</h1>
-          <p className="mb-6 text-sm text-gray-600">Create a team to get started.</p>
+          <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome to Northstar</h1>
+          <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">Create a team to get started.</p>
           <button
             onClick={() => setCreateTeamOpen(true)}
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -44,8 +44,8 @@ export default function DashboardPage() {
       <div className="p-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Boards</h1>
-            <p className="text-sm text-gray-500">{activeTeam?.name}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Boards</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{activeTeam?.name}</p>
           </div>
           <button
             onClick={() => setCreateBoardOpen(true)}
@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
             <button
               onClick={() => setCreateBoardOpen(true)}
-              className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-700"
+              className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
               <Plus className="mr-2 h-4 w-4" />
               {boards.length === 0 ? 'Create your first board' : 'New Board'}

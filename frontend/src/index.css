@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: any element under <html class="dark"> picks
+   up `dark:` Tailwind variants. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html.dark {
+  color-scheme: dark;
+}
+
 /* Markdown rendering styles (used by <Markdown /> inside cards & comments). */
 .prose-northstar {
   font-size: 0.875rem;
@@ -31,6 +39,15 @@
   font-size: 0.85em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+html.dark .prose-northstar { color: #e5e7eb; }
+html.dark .prose-northstar a { color: #60a5fa; }
+html.dark .prose-northstar a:hover { color: #93c5fd; }
+html.dark .prose-northstar code { background-color: #374151; color: #f3f4f6; }
+html.dark .prose-northstar blockquote { border-color: #4b5563; color: #9ca3af; }
+html.dark .prose-northstar hr { border-color: #374151; }
+html.dark .prose-northstar th { background-color: #374151; }
+html.dark .prose-northstar th,
+html.dark .prose-northstar td { border-color: #4b5563; }
 .prose-northstar pre {
   background-color: #1f2937;
   color: #f3f4f6;

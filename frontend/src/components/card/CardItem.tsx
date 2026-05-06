@@ -23,7 +23,7 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer rounded-lg border-l-4 bg-white p-3 text-sm shadow-sm transition-shadow hover:shadow-md ${
+      className={`group cursor-pointer rounded-lg border-l-4 bg-white p-3 text-sm shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800 ${
         isDragging ? 'opacity-50' : ''
       } ${completedAt ? 'opacity-70' : ''}`}
       style={{
@@ -37,7 +37,7 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
           </div>
         )}
         <div
-          className={`flex-1 ${completedAt ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+          className={`flex-1 ${completedAt ? 'text-gray-500 line-through dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
         >
           {card.title}
         </div>
@@ -59,7 +59,7 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
                 ? 'bg-green-100 text-green-700'
                 : isOverdue
                   ? 'bg-red-100 text-red-700'
-                  : 'bg-gray-100 text-gray-600'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
             }`}
           >
             <Calendar className="h-3 w-3" />
@@ -71,7 +71,7 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
             className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
               card.checklist_done === card.checklist_total
                 ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-gray-600'
+                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
             }`}
           >
             <CheckSquare className="h-3 w-3" />

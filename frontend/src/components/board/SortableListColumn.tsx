@@ -51,7 +51,7 @@ export default function SortableListColumn({ boardId, list, onCardClick }: Props
         transition,
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="flex h-fit max-h-full min-w-72 flex-col rounded-lg bg-gray-100 p-2"
+      className="flex h-fit max-h-full min-w-72 flex-col rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
     >
       <div className="mb-2 flex items-center justify-between gap-2 px-1 py-1">
         {editingName ? (
@@ -75,7 +75,7 @@ export default function SortableListColumn({ boardId, list, onCardClick }: Props
             {...attributes}
             {...listeners}
             onDoubleClick={() => setEditingName(true)}
-            className="flex-1 cursor-grab text-left text-sm font-semibold text-gray-700 active:cursor-grabbing"
+            className="flex-1 cursor-grab text-left text-sm font-semibold text-gray-700 active:cursor-grabbing dark:text-gray-200"
           >
             {list.name}
           </button>
