@@ -205,6 +205,7 @@ func main() {
 				r.Delete("/permanent", archiveHandler.PermanentDeleteCard)
 				r.Patch("/move", cardHandler.Move)
 				r.Patch("/reorder", cardHandler.Reorder)
+				r.Patch("/cover", cardHandler.SetCover)
 
 				r.Post("/labels", labelHandler.AttachToCard)
 				r.Delete("/labels/{labelId}", labelHandler.DetachFromCard)

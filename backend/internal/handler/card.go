@@ -47,6 +47,12 @@ type reorderCardRequest struct {
 	Position float64 `json:"position"`
 }
 
+type setCoverRequest struct {
+	AttachmentID *string `json:"attachment_id"`
+	Color        *string `json:"color"`
+	Size         *string `json:"size"`
+}
+
 func (h *CardHandler) boardIDForList(ctx context.Context, listID string) string {
 	list, err := h.listRepo.FindByID(ctx, listID)
 	if err != nil {
@@ -222,6 +228,38 @@ func (h *CardHandler) Move(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "moved"})
+}
+
+func (h *CardHandler) SetCover(w http.ResponseWriter, r *http.Request) {
+	cardID := chi.URLParam(r, "cardId")
+	userID := middleware.GetUserID(r.Context())
+
+	var req setCoverRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Size != nil && *req.Size != "" && *req.Size != "half" && *req.Size != "full" {
+		writeError(w, http.StatusBadRequest, "size must be 'half', 'full', or empty")
+		return
+	}
+
+	if err := h.cardRepo.SetCover(r.Context(), cardID, repository.CoverUpdate{
+		AttachmentID: req.AttachmentID,
+		Color:        req.Color,
+		Size:         req.Size,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if boardID := h.boardIDForCard(r.Context(), cardID); boardID != "" {
+		h.events.Emit(r.Context(), boardID, userID, "card.cover_updated", "card", cardID, map[string]interface{}{
+			"card_id": cardID,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *CardHandler) Reorder(w http.ResponseWriter, r *http.Request) {

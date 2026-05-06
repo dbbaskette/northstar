@@ -21,13 +21,15 @@ func NewCardRepo(pool *pgxpool.Pool) *CardRepo {
 }
 
 const cardSelectColumns = `id, list_id, title, description, position, priority, due_date, completed_at,
+		cover_attachment_id, cover_color, cover_size::text,
 		is_archived, created_by, created_at, updated_at`
 
 func scanCard(row pgx.Row, c *models.Card) error {
 	return row.Scan(
 		&c.ID, &c.ListID, &c.Title, &c.Description, &c.Position,
-		&c.Priority, &c.DueDate, &c.CompletedAt, &c.IsArchived,
-		&c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+		&c.Priority, &c.DueDate, &c.CompletedAt,
+		&c.CoverAttachmentID, &c.CoverColor, &c.CoverSize,
+		&c.IsArchived, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
 	)
 }
 
@@ -120,6 +122,45 @@ func (r *CardRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+type CoverUpdate struct {
+	AttachmentID *string // nil = no change, "" = clear
+	Color        *string
+	Size         *string // 'half' | 'full' | ''
+}
+
+func (r *CardRepo) SetCover(ctx context.Context, id string, u CoverUpdate) error {
+	var (
+		attachID  pgtype.UUID
+		color     pgtype.Text
+		size      pgtype.Text
+	)
+	if u.AttachmentID != nil && *u.AttachmentID != "" {
+		attachID.Scan(*u.AttachmentID)
+	}
+	if u.Color != nil && *u.Color != "" {
+		color = pgtype.Text{String: *u.Color, Valid: true}
+	}
+	if u.Size != nil && *u.Size != "" {
+		size = pgtype.Text{String: *u.Size, Valid: true}
+	}
+
+	const q = `
+		UPDATE cards
+		SET cover_attachment_id = $2,
+		    cover_color = $3,
+		    cover_size = $4::card_cover_size
+		WHERE id = $1 AND deleted_at IS NULL`
+
+	ct, err := r.pool.Exec(ctx, q, id, attachID, color, size)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("card not found")
+	}
+	return nil
+}
+
 func (r *CardRepo) Restore(ctx context.Context, id string) error {
 	ct, err := r.pool.Exec(ctx,
 		`UPDATE cards SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL`, id)
@@ -146,7 +187,9 @@ func (r *CardRepo) PermanentDelete(ctx context.Context, id string) error {
 func (r *CardRepo) ListArchivedByBoard(ctx context.Context, boardID string) ([]models.Card, error) {
 	q := `
 		SELECT c.id, c.list_id, c.title, c.description, c.position, c.priority,
-		       c.due_date, c.completed_at, c.is_archived, c.created_by,
+		       c.due_date, c.completed_at,
+		       c.cover_attachment_id, c.cover_color, c.cover_size::text,
+		       c.is_archived, c.created_by,
 		       c.created_at, c.updated_at, c.deleted_at
 		FROM cards c
 		JOIN lists l ON c.list_id = l.id
@@ -165,7 +208,9 @@ func (r *CardRepo) ListArchivedByBoard(ctx context.Context, boardID string) ([]m
 		var c models.Card
 		if err := rows.Scan(
 			&c.ID, &c.ListID, &c.Title, &c.Description, &c.Position,
-			&c.Priority, &c.DueDate, &c.CompletedAt, &c.IsArchived,
+			&c.Priority, &c.DueDate, &c.CompletedAt,
+			&c.CoverAttachmentID, &c.CoverColor, &c.CoverSize,
+			&c.IsArchived,
 			&c.CreatedBy, &c.CreatedAt, &c.UpdatedAt, &c.DeletedAt,
 		); err != nil {
 			return nil, err

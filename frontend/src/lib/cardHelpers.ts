@@ -48,3 +48,25 @@ export function cardDescription(card: { description?: unknown }): string {
   const v = flatString(card.description)
   return v ?? ''
 }
+
+export function cardCoverColor(card: BoardCard): string | null {
+  return flatString(card.cover_color as unknown)
+}
+
+export function cardCoverSize(card: BoardCard): 'half' | 'full' | null {
+  const v = flatString(card.cover_size as unknown)
+  return v === 'half' || v === 'full' ? v : null
+}
+
+export function cardCoverAttachmentID(card: BoardCard): string | null {
+  const v = card.cover_attachment_id
+  if (!v || !('Valid' in v) || !v.Valid) return null
+  const bytes = v.Bytes
+  const hex = bytes.map((x) => x.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+export function cardCoverImageURL(card: BoardCard): string | null {
+  const id = cardCoverAttachmentID(card)
+  return id ? `/api/v1/attachments/${id}/download` : null
+}

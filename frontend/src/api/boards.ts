@@ -42,6 +42,9 @@ export interface BoardCard {
   checklist_done?: number
   attachment_count?: number
   labels?: BoardLabel[]
+  cover_attachment_id?: { Bytes: number[]; Valid: boolean } | null
+  cover_color?: { String: string; Valid: boolean } | string | null
+  cover_size?: { String: string; Valid: boolean } | string | null
 }
 
 export interface BoardLabel {

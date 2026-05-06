@@ -4,6 +4,9 @@ import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
   cardCompletedAt,
+  cardCoverColor,
+  cardCoverImageURL,
+  cardCoverSize,
   cardDueDate,
   cardPriority,
 } from '@/lib/cardHelpers'
@@ -18,72 +21,113 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
   const priority = cardPriority(card)
   const dueDate = cardDueDate(card)
   const completedAt = cardCompletedAt(card)
+  const coverImage = cardCoverImageURL(card)
+  const coverColor = cardCoverColor(card)
+  const coverSize = cardCoverSize(card)
   const isOverdue = dueDate && !completedAt && dueDate.getTime() < Date.now()
+
+  // Full cover: image fills the whole card thumbnail with title overlaid.
+  if (coverImage && coverSize === 'full') {
+    return (
+      <div
+        onClick={onClick}
+        className={`group cursor-pointer overflow-hidden rounded-lg border-l-4 shadow-sm transition-shadow hover:shadow-md ${
+          isDragging ? 'opacity-50' : ''
+        } ${completedAt ? 'opacity-70' : ''}`}
+        style={{
+          borderLeftColor: priority ? PRIORITY_COLORS[priority] : 'transparent',
+        }}
+      >
+        <div
+          className="relative h-32 w-full bg-cover bg-center"
+          style={{ backgroundImage: `url("${coverImage}")` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-black/60" />
+          <div className="absolute bottom-0 left-0 right-0 p-3 text-sm font-medium text-white">
+            {card.title}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer rounded-lg border-l-4 bg-white p-3 text-sm shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800 ${
+      className={`group cursor-pointer overflow-hidden rounded-lg border-l-4 bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800 ${
         isDragging ? 'opacity-50' : ''
       } ${completedAt ? 'opacity-70' : ''}`}
       style={{
         borderLeftColor: priority ? PRIORITY_COLORS[priority] : 'transparent',
       }}
     >
-      <div className="flex items-start gap-2">
-        {completedAt && (
-          <div className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
-            <Check className="h-3 w-3" strokeWidth={3} />
-          </div>
-        )}
+      {/* Half cover: image or color band at top */}
+      {coverImage && coverSize !== 'full' && (
         <div
-          className={`flex-1 ${completedAt ? 'text-gray-500 line-through dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
-        >
-          {card.title}
-        </div>
-      </div>
+          className="h-20 w-full bg-cover bg-center"
+          style={{ backgroundImage: `url("${coverImage}")` }}
+        />
+      )}
+      {!coverImage && coverColor && (
+        <div className="h-8 w-full" style={{ backgroundColor: coverColor }} />
+      )}
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-        {priority && (
-          <span
-            className="rounded px-1.5 py-0.5 font-medium text-white"
-            style={{ backgroundColor: PRIORITY_COLORS[priority] }}
+      <div className="p-3 text-sm">
+        <div className="flex items-start gap-2">
+          {completedAt && (
+            <div className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
+              <Check className="h-3 w-3" strokeWidth={3} />
+            </div>
+          )}
+          <div
+            className={`flex-1 ${completedAt ? 'text-gray-500 line-through dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
           >
-            {PRIORITY_LABELS[priority]}
-          </span>
-        )}
-        {dueDate && (
-          <span
-            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
-              completedAt
-                ? 'bg-green-100 text-green-700'
-                : isOverdue
-                  ? 'bg-red-100 text-red-700'
+            {card.title}
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+          {priority && (
+            <span
+              className="rounded px-1.5 py-0.5 font-medium text-white"
+              style={{ backgroundColor: PRIORITY_COLORS[priority] }}
+            >
+              {PRIORITY_LABELS[priority]}
+            </span>
+          )}
+          {dueDate && (
+            <span
+              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+                completedAt
+                  ? 'bg-green-100 text-green-700'
+                  : isOverdue
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Calendar className="h-3 w-3" />
+              {dueDate.toLocaleDateString()}
+            </span>
+          )}
+          {(card.checklist_total ?? 0) > 0 && (
+            <span
+              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+                card.checklist_done === card.checklist_total
+                  ? 'bg-green-100 text-green-700'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <Calendar className="h-3 w-3" />
-            {dueDate.toLocaleDateString()}
-          </span>
-        )}
-        {(card.checklist_total ?? 0) > 0 && (
-          <span
-            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
-              card.checklist_done === card.checklist_total
-                ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-            }`}
-          >
-            <CheckSquare className="h-3 w-3" />
-            {card.checklist_done}/{card.checklist_total}
-          </span>
-        )}
-        {(card.attachment_count ?? 0) > 0 && (
-          <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">
-            <Paperclip className="h-3 w-3" />
-            {card.attachment_count}
-          </span>
-        )}
+              }`}
+            >
+              <CheckSquare className="h-3 w-3" />
+              {card.checklist_done}/{card.checklist_total}
+            </span>
+          )}
+          {(card.attachment_count ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+              <Paperclip className="h-3 w-3" />
+              {card.attachment_count}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

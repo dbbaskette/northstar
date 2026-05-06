@@ -24,6 +24,7 @@ import type { Board, CardPriority } from '@/api/boards'
 import { useCreateLabel } from '@/api/labels'
 import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
+import CardCoverPicker from './CardCoverPicker'
 import Markdown from '../ui/Markdown'
 import Avatar from '../ui/Avatar'
 import {
@@ -379,6 +380,14 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
 
             {/* Attachments */}
             <CardAttachments boardId={board.id} cardId={card.id} attachments={card.attachments || []} />
+
+            {/* Cover */}
+            <CardCoverPicker
+              boardId={board.id}
+              cardId={card.id}
+              card={card}
+              attachments={card.attachments || []}
+            />
 
             {/* Add label */}
             <div>
