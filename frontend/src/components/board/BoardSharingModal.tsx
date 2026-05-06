@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Lock, Users, X, Trash2 } from 'lucide-react'
+import { Lock, Users, X, Trash2, Link as LinkIcon, Copy, Check } from 'lucide-react'
 import {
   useAddBoardMember,
   useBoardMembers,
   useRemoveBoardMember,
   useUpdateBoardVisibility,
 } from '@/api/boardMembers'
+import { useCreateInvite, useDeleteInvite, useInvites } from '@/api/invites'
 import { useUsers } from '@/api/users'
 import type { Board } from '@/api/boards'
 import Avatar from '../ui/Avatar'
@@ -19,10 +20,28 @@ interface Props {
 export default function BoardSharingModal({ open, board, onClose }: Props) {
   const { data: members = [] } = useBoardMembers(open ? board.id : null)
   const { data: allUsers = [] } = useUsers()
+  const { data: invites = [] } = useInvites(open ? board.id : null)
   const updateVisibility = useUpdateBoardVisibility(board.id)
   const addMember = useAddBoardMember(board.id)
   const removeMember = useRemoveBoardMember(board.id)
+  const createInvite = useCreateInvite(board.id)
+  const deleteInvite = useDeleteInvite(board.id)
   const [error, setError] = useState('')
+  const [copiedToken, setCopiedToken] = useState<string | null>(null)
+
+  const inviteUrl = (token: string) => `${window.location.origin}/invites/${token}`
+
+  const copy = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl(token))
+      setCopiedToken(token)
+      setTimeout(() => setCopiedToken(null), 1500)
+    } catch {
+      // ignore
+    }
+  }
+
+  const pendingInvites = invites.filter((i) => !i.accepted_at?.Valid)
 
   if (!open) return null
 
@@ -111,6 +130,71 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
                 </div>
               </button>
             </div>
+          </section>
+
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Invite link
+              </span>
+              <button
+                onClick={async () => {
+                  setError('')
+                  try {
+                    await createInvite.mutateAsync({ role: 'member', expires_in_days: 14 })
+                  } catch (err: unknown) {
+                    setError(
+                      (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+                        'Failed to create invite',
+                    )
+                  }
+                }}
+                disabled={createInvite.isPending}
+                className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                <LinkIcon className="h-3.5 w-3.5" />
+                {createInvite.isPending ? 'Creating…' : 'New invite'}
+              </button>
+            </div>
+            {pendingInvites.length === 0 ? (
+              <div className="text-xs text-gray-400">
+                No active invites. Click <span className="font-medium">New invite</span> to generate a shareable link.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {pendingInvites.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-700"
+                  >
+                    <input
+                      readOnly
+                      value={inviteUrl(inv.token)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="flex-1 truncate rounded bg-white px-2 py-1 font-mono text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    />
+                    <button
+                      onClick={() => copy(inv.token)}
+                      className="rounded p-1.5 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+                      title="Copy"
+                    >
+                      {copiedToken === inv.token ? (
+                        <Check className="h-3.5 w-3.5 text-green-600" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => deleteInvite.mutate(inv.id)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-200 hover:text-red-600 dark:hover:bg-gray-600"
+                      title="Revoke"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {isPrivate && (

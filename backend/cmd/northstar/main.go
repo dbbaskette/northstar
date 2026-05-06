@@ -66,6 +66,7 @@ func main() {
 	checklistRepo := repository.NewChecklistRepo(pool)
 	attachmentRepo := repository.NewAttachmentRepo(pool)
 	searchRepo := repository.NewSearchRepo(pool)
+	inviteRepo := repository.NewInviteRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -93,6 +94,7 @@ func main() {
 	archiveHandler := handler.NewArchiveHandler(cardRepo, listRepo, events)
 	searchHandler := handler.NewSearchHandler(searchRepo)
 	userHandler := handler.NewUserHandler(userRepo, store)
+	inviteHandler := handler.NewInviteHandler(inviteRepo, boardRepo, teamRepo)
 
 	r := chi.NewRouter()
 
@@ -117,6 +119,7 @@ func main() {
 		r.Post("/auth/login", authHandler.Login)
 		r.Post("/auth/refresh", authHandler.Refresh)
 
+		r.Get("/invites/{token}", inviteHandler.Preview)
 		r.Get("/ws", wsHandler.Connect)
 		r.Get("/avatars/{userId}", userHandler.DownloadAvatar)
 
@@ -158,6 +161,8 @@ func main() {
 				r.Get("/members", boardHandler.ListMembers)
 				r.Post("/members", boardHandler.AddMember)
 				r.Delete("/members/{userId}", boardHandler.RemoveMember)
+				r.Post("/invites", inviteHandler.Create)
+				r.Get("/invites", inviteHandler.List)
 
 				r.Post("/lists", listHandler.Create)
 				r.Post("/labels", labelHandler.Create)
@@ -213,6 +218,9 @@ func main() {
 				r.Patch("/", commentHandler.Update)
 				r.Delete("/", commentHandler.Delete)
 			})
+
+			r.Post("/invites/{token}/accept", inviteHandler.Accept)
+			r.Delete("/invites/{inviteId}", inviteHandler.Delete)
 
 			r.Route("/labels/{labelId}", func(r chi.Router) {
 				r.Patch("/", labelHandler.Update)
