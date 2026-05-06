@@ -154,6 +154,10 @@ func main() {
 				r.Get("/", boardHandler.Get)
 				r.Patch("/", boardHandler.Update)
 				r.Delete("/", boardHandler.Delete)
+				r.Patch("/visibility", boardHandler.UpdateVisibility)
+				r.Get("/members", boardHandler.ListMembers)
+				r.Post("/members", boardHandler.AddMember)
+				r.Delete("/members/{userId}", boardHandler.RemoveMember)
 
 				r.Post("/lists", listHandler.Create)
 				r.Post("/labels", labelHandler.Create)

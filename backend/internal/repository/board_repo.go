@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/dbbaskette/northstar/internal/models"
@@ -31,13 +32,13 @@ func (r *BoardRepo) Create(ctx context.Context, b *models.Board) error {
 
 func (r *BoardRepo) FindByID(ctx context.Context, id string) (*models.Board, error) {
 	const q = `
-		SELECT id, team_id, name, description, background, is_archived, created_by, created_at, updated_at
+		SELECT id, team_id, name, description, background, visibility, is_archived, created_by, created_at, updated_at
 		FROM boards
 		WHERE id = $1 AND deleted_at IS NULL`
 
 	b := &models.Board{}
 	err := r.pool.QueryRow(ctx, q, id).Scan(
-		&b.ID, &b.TeamID, &b.Name, &b.Description, &b.Background,
+		&b.ID, &b.TeamID, &b.Name, &b.Description, &b.Background, &b.Visibility,
 		&b.IsArchived, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -48,7 +49,7 @@ func (r *BoardRepo) FindByID(ctx context.Context, id string) (*models.Board, err
 
 func (r *BoardRepo) ListByTeam(ctx context.Context, teamID string) ([]models.Board, error) {
 	const q = `
-		SELECT id, team_id, name, description, background, is_archived, created_by, created_at, updated_at
+		SELECT id, team_id, name, description, background, visibility, is_archived, created_by, created_at, updated_at
 		FROM boards
 		WHERE team_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC`
@@ -63,7 +64,7 @@ func (r *BoardRepo) ListByTeam(ctx context.Context, teamID string) ([]models.Boa
 	for rows.Next() {
 		var b models.Board
 		if err := rows.Scan(
-			&b.ID, &b.TeamID, &b.Name, &b.Description, &b.Background,
+			&b.ID, &b.TeamID, &b.Name, &b.Description, &b.Background, &b.Visibility,
 			&b.IsArchived, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -71,6 +72,108 @@ func (r *BoardRepo) ListByTeam(ctx context.Context, teamID string) ([]models.Boa
 		boards = append(boards, b)
 	}
 	return boards, rows.Err()
+}
+
+func (r *BoardRepo) UpdateVisibility(ctx context.Context, id, visibility string) error {
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE boards SET visibility = $2 WHERE id = $1 AND deleted_at IS NULL`,
+		id, visibility)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("board not found")
+	}
+	return nil
+}
+
+// AccessibleByUser returns the user's effective role on the board
+// ('owner' | 'admin' | 'member' | 'viewer'), or empty string if no access.
+// For visibility='team', team membership grants member-level access.
+// For visibility='private', only board_members entries grant access.
+func (r *BoardRepo) AccessibleByUser(ctx context.Context, boardID, userID string) (string, error) {
+	board, err := r.FindByID(ctx, boardID)
+	if err != nil {
+		return "", err
+	}
+
+	// Direct board membership trumps team membership
+	var boardRole string
+	err = r.pool.QueryRow(ctx,
+		`SELECT role::text FROM board_members WHERE board_id = $1 AND user_id = $2`,
+		boardID, userID).Scan(&boardRole)
+	if err == nil && boardRole != "" {
+		return boardRole, nil
+	}
+
+	if board.Visibility == "private" {
+		return "", nil
+	}
+
+	// Team-visible boards: any team member can read
+	var teamRole string
+	err = r.pool.QueryRow(ctx,
+		`SELECT role::text FROM team_members WHERE team_id = $1 AND user_id = $2`,
+		uuidToStr(board.TeamID), userID).Scan(&teamRole)
+	if err != nil {
+		return "", nil
+	}
+	if teamRole == "owner" || teamRole == "admin" {
+		return "admin", nil
+	}
+	return "member", nil
+}
+
+func (r *BoardRepo) AddMember(ctx context.Context, boardID, userID, role string) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO board_members (board_id, user_id, role) VALUES ($1, $2, $3)
+		 ON CONFLICT (board_id, user_id) DO UPDATE SET role = $3`,
+		boardID, userID, role)
+	return err
+}
+
+func (r *BoardRepo) RemoveMember(ctx context.Context, boardID, userID string) error {
+	_, err := r.pool.Exec(ctx,
+		`DELETE FROM board_members WHERE board_id = $1 AND user_id = $2`,
+		boardID, userID)
+	return err
+}
+
+func (r *BoardRepo) ListMembers(ctx context.Context, boardID string) ([]models.BoardMember, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT bm.board_id, bm.user_id, bm.role::text,
+		       u.id, u.email, u.username, u.display_name, u.avatar_url, u.role
+		FROM board_members bm
+		JOIN users u ON bm.user_id = u.id
+		WHERE bm.board_id = $1
+		ORDER BY u.display_name`, boardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.BoardMember
+	for rows.Next() {
+		var m models.BoardMember
+		u := &models.User{}
+		if err := rows.Scan(
+			&m.BoardID, &m.UserID, &m.Role,
+			&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.Role,
+		); err != nil {
+			return nil, err
+		}
+		m.User = u
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+func uuidToStr(id pgtype.UUID) string {
+	if !id.Valid {
+		return ""
+	}
+	b := id.Bytes
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
 func (r *BoardRepo) Update(ctx context.Context, id string, name, description, background string) error {

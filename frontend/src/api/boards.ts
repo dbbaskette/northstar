@@ -7,6 +7,7 @@ export interface Board {
   name: string
   description?: { String: string; Valid: boolean } | string | null
   background: string
+  visibility: 'team' | 'private'
   is_archived: boolean
   created_by: string
   created_at: string

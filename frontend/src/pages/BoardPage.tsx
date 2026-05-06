@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Archive } from 'lucide-react'
+import { ChevronLeft, Archive, Share2, Lock } from 'lucide-react'
 import { useBoard } from '@/api/boards'
 import BoardView from '@/components/board/BoardView'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
+import BoardSharingModal from '@/components/board/BoardSharingModal'
 import CardModal from '@/components/card/CardModal'
 import ActivityFeed from '@/components/activity/ActivityFeed'
 import ArchivedPanel from '@/components/board/ArchivedPanel'
@@ -15,6 +16,7 @@ export default function BoardPage() {
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
   const [showActivity, setShowActivity] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [showShare, setShowShare] = useState(false)
   const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
 
   useBoardWebSocket(boardId || null)
@@ -53,9 +55,26 @@ export default function BoardPage() {
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <h2 className="text-lg font-semibold">{board.name}</h2>
+          {board.visibility === 'private' && (
+            <span
+              className="inline-flex items-center gap-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+              title="Private board — visible only to its members"
+            >
+              <Lock className="h-3 w-3" />
+              Private
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <BoardFilters board={board} onChange={setFilter} />
+          <button
+            onClick={() => setShowShare(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
+            title="Share board"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </button>
           <button
             onClick={() => setShowArchived(true)}
             className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
@@ -95,6 +114,12 @@ export default function BoardPage() {
         boardId={board.id}
         onClose={() => setShowArchived(false)}
       />
+      <BoardSharingModal
+        open={showShare}
+        board={board}
+        onClose={() => setShowShare(false)}
+      />
     </div>
   )
 }
+
