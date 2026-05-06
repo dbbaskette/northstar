@@ -23,4 +23,9 @@ type Card struct {
 	Labels      []Label            `json:"labels,omitempty"`
 	Assignees   []User             `json:"assignees,omitempty"`
 	Comments    []Comment          `json:"comments,omitempty"`
+	Checklists  []Checklist        `json:"checklists,omitempty"`
+
+	// Aggregate counts (used on the board view, not the full card detail)
+	ChecklistTotal int `json:"checklist_total,omitempty"`
+	ChecklistDone  int `json:"checklist_done,omitempty"`
 }

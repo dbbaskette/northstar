@@ -1,4 +1,4 @@
-import { Calendar, Check } from 'lucide-react'
+import { Calendar, Check, CheckSquare } from 'lucide-react'
 import type { BoardCard } from '@/api/boards'
 import {
   PRIORITY_COLORS,
@@ -64,6 +64,18 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
           >
             <Calendar className="h-3 w-3" />
             {dueDate.toLocaleDateString()}
+          </span>
+        )}
+        {(card.checklist_total ?? 0) > 0 && (
+          <span
+            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+              card.checklist_done === card.checklist_total
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            <CheckSquare className="h-3 w-3" />
+            {card.checklist_done}/{card.checklist_total}
           </span>
         )}
       </div>

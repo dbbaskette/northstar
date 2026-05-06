@@ -174,6 +174,33 @@ func (r *BoardRepo) GetFullBoard(ctx context.Context, id string) (*models.Board,
 				board.Lists[i].ID.Bytes[6:8], board.Lists[i].ID.Bytes[8:10], board.Lists[i].ID.Bytes[10:16])
 			board.Lists[i].Cards = cardsByList[lid]
 		}
+
+		// Attach checklist counts to each card
+		var allCardIDs []string
+		for _, l := range board.Lists {
+			for _, c := range l.Cards {
+				allCardIDs = append(allCardIDs, fmt.Sprintf("%x-%x-%x-%x-%x",
+					c.ID.Bytes[0:4], c.ID.Bytes[4:6], c.ID.Bytes[6:8], c.ID.Bytes[8:10], c.ID.Bytes[10:16]))
+			}
+		}
+		if len(allCardIDs) > 0 {
+			checklistRepo := &ChecklistRepo{pool: r.pool}
+			counts, err := checklistRepo.CountsByCardIDs(ctx, allCardIDs)
+			if err != nil {
+				return nil, err
+			}
+			for i := range board.Lists {
+				for j := range board.Lists[i].Cards {
+					c := &board.Lists[i].Cards[j]
+					cardID := fmt.Sprintf("%x-%x-%x-%x-%x",
+						c.ID.Bytes[0:4], c.ID.Bytes[4:6], c.ID.Bytes[6:8], c.ID.Bytes[8:10], c.ID.Bytes[10:16])
+					if v, ok := counts[cardID]; ok {
+						c.ChecklistTotal = v[0]
+						c.ChecklistDone = v[1]
+					}
+				}
+			}
+		}
 	}
 
 	labelsQ := `

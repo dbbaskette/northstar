@@ -224,5 +224,12 @@ func (r *CardRepo) GetCardWithDetails(ctx context.Context, id string) (*models.C
 		card.Comments = append(card.Comments, cm)
 	}
 
+	checklistRepo := &ChecklistRepo{pool: r.pool}
+	checklists, err := checklistRepo.ListWithItemsByCard(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	card.Checklists = checklists
+
 	return card, nil
 }

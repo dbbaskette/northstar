@@ -62,6 +62,7 @@ func main() {
 	commentRepo := repository.NewCommentRepo(pool)
 	labelRepo := repository.NewLabelRepo(pool)
 	activityRepo := repository.NewActivityRepo(pool)
+	checklistRepo := repository.NewChecklistRepo(pool)
 
 	hub := ws.NewHub()
 	go hub.Run()
@@ -78,6 +79,7 @@ func main() {
 	labelHandler := handler.NewLabelHandler(labelRepo, cardRepo, listRepo, events)
 	activityHandler := handler.NewActivityHandler(activityRepo)
 	wsHandler := handler.NewWSHandler(hub, authService)
+	checklistHandler := handler.NewChecklistHandler(checklistRepo, cardRepo, listRepo, events)
 
 	r := chi.NewRouter()
 
@@ -154,6 +156,19 @@ func main() {
 				r.Post("/assignees", labelHandler.AddAssignee)
 				r.Delete("/assignees/{userId}", labelHandler.RemoveAssignee)
 				r.Post("/comments", commentHandler.Create)
+				r.Post("/checklists", checklistHandler.Create)
+			})
+
+			r.Route("/checklists/{checklistId}", func(r chi.Router) {
+				r.Patch("/", checklistHandler.Update)
+				r.Delete("/", checklistHandler.Delete)
+				r.Post("/items", checklistHandler.CreateItem)
+			})
+
+			r.Route("/checklist-items/{itemId}", func(r chi.Router) {
+				r.Patch("/", checklistHandler.UpdateItem)
+				r.Delete("/", checklistHandler.DeleteItem)
+				r.Patch("/reorder", checklistHandler.ReorderItem)
 			})
 
 			r.Route("/comments/{commentId}", func(r chi.Router) {

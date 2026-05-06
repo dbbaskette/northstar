@@ -37,6 +37,8 @@ export interface BoardCard {
   completed_at?: { Time: string; Valid: boolean } | null
   is_archived: boolean
   created_at?: string
+  checklist_total?: number
+  checklist_done?: number
 }
 
 export interface BoardLabel {

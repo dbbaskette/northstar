@@ -22,6 +22,7 @@ import {
 } from '@/api/cards'
 import type { Board, CardPriority } from '@/api/boards'
 import { useCreateLabel } from '@/api/labels'
+import CardChecklists from './CardChecklists'
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -364,6 +365,9 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                 </button>
               )}
             </div>
+
+            {/* Checklists */}
+            <CardChecklists boardId={board.id} cardId={card.id} checklists={card.checklists || []} />
 
             {/* Add label */}
             <div>

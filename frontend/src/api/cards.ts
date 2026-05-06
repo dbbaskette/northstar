@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from './client'
 import type { BoardCard } from './boards'
+import type { Checklist } from './checklists'
 
 export interface CardLabel {
   id: string
@@ -31,6 +32,7 @@ export interface CardDetail extends BoardCard {
   labels?: CardLabel[]
   assignees?: CardAssignee[]
   comments?: CardComment[]
+  checklists?: Checklist[]
 }
 
 export function useCard(cardId: string | null) {
