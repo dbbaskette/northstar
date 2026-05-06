@@ -15,9 +15,10 @@ interface Props {
   card: BoardCard
   onClick: () => void
   isDragging?: boolean
+  staleThresholdDays?: number
 }
 
-export default function CardItem({ card, onClick, isDragging }: Props) {
+export default function CardItem({ card, onClick, isDragging, staleThresholdDays }: Props) {
   const priority = cardPriority(card)
   const dueDate = cardDueDate(card)
   const completedAt = cardCompletedAt(card)
@@ -25,6 +26,15 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
   const coverColor = cardCoverColor(card)
   const coverSize = cardCoverSize(card)
   const isOverdue = dueDate && !completedAt && dueDate.getTime() < Date.now()
+
+  // Stale = no edit since `staleThresholdDays` ago. Completed cards are
+  // never marked stale even if old.
+  const staleDays = (() => {
+    if (!staleThresholdDays || completedAt || !card.updated_at) return null
+    const ageMs = Date.now() - new Date(card.updated_at).getTime()
+    const days = Math.floor(ageMs / (24 * 60 * 60 * 1000))
+    return days >= staleThresholdDays ? days : null
+  })()
 
   const ariaLabel = (() => {
     const bits: string[] = [`Card: ${card.title}`]
@@ -149,6 +159,16 @@ export default function CardItem({ card, onClick, isDragging }: Props) {
             <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               <Paperclip className="h-3 w-3" />
               {card.attachment_count}
+            </span>
+          )}
+          {staleDays !== null && (
+            <span
+              className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
+              title={`No updates in ${staleDays} days`}
+              aria-label={`Stale: no updates in ${staleDays} days`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              {staleDays}d
             </span>
           )}
         </div>

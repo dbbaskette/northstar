@@ -7,20 +7,21 @@ import (
 )
 
 type Board struct {
-	ID          pgtype.UUID        `json:"id"`
-	TeamID      pgtype.UUID        `json:"team_id"`
-	Name        string             `json:"name"`
-	Description pgtype.Text        `json:"description,omitempty"`
-	Background  string             `json:"background"`
-	Visibility  string             `json:"visibility"`
-	IsTemplate  bool               `json:"is_template"`
-	IsArchived  bool               `json:"is_archived"`
-	CreatedBy   pgtype.UUID        `json:"created_by"`
-	CreatedAt   time.Time          `json:"created_at"`
-	UpdatedAt   time.Time          `json:"updated_at"`
-	DeletedAt   pgtype.Timestamptz `json:"deleted_at,omitempty"`
-	Lists       []List             `json:"lists,omitempty"`
-	Labels      []Label            `json:"labels,omitempty"`
+	ID                 pgtype.UUID        `json:"id"`
+	TeamID             pgtype.UUID        `json:"team_id"`
+	Name               string             `json:"name"`
+	Description        pgtype.Text        `json:"description,omitempty"`
+	Background         string             `json:"background"`
+	Visibility         string             `json:"visibility"`
+	IsTemplate         bool               `json:"is_template"`
+	IsArchived         bool               `json:"is_archived"`
+	StaleThresholdDays int                `json:"stale_threshold_days"`
+	CreatedBy          pgtype.UUID        `json:"created_by"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+	DeletedAt          pgtype.Timestamptz `json:"deleted_at,omitempty"`
+	Lists              []List             `json:"lists,omitempty"`
+	Labels             []Label            `json:"labels,omitempty"`
 }
 
 type BoardMember struct {

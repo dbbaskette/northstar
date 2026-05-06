@@ -330,6 +330,32 @@ func (h *BoardHandler) Copy(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{"board_id": newID})
 }
 
+type updateStaleThresholdRequest struct {
+	Days int `json:"days"`
+}
+
+func (h *BoardHandler) UpdateStaleThreshold(w http.ResponseWriter, r *http.Request) {
+	boardID := chi.URLParam(r, "boardId")
+	userID := middleware.GetUserID(r.Context())
+
+	role, err := h.boardRepo.AccessibleByUser(r.Context(), boardID, userID)
+	if err != nil || (role != "owner" && role != "admin") {
+		writeError(w, http.StatusForbidden, "only board admins can change stale threshold")
+		return
+	}
+
+	var req updateStaleThresholdRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if err := h.boardRepo.UpdateStaleThreshold(r.Context(), boardID, req.Days); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"days": req.Days})
+}
+
 func (h *BoardHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	boardID := chi.URLParam(r, "boardId")
 

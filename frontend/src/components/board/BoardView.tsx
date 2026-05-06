@@ -236,6 +236,7 @@ export default function BoardView({ board, onCardClick, filter }: Props) {
               boardId={board.id}
               list={list}
               onCardClick={onCardClick}
+              staleThresholdDays={board.stale_threshold_days}
             />
           ))}
         </SortableContext>

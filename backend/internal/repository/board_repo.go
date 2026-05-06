@@ -32,14 +32,14 @@ func (r *BoardRepo) Create(ctx context.Context, b *models.Board) error {
 
 func (r *BoardRepo) FindByID(ctx context.Context, id string) (*models.Board, error) {
 	const q = `
-		SELECT id, team_id, name, description, background, visibility, is_template, is_archived, created_by, created_at, updated_at
+		SELECT id, team_id, name, description, background, visibility, is_template, is_archived, stale_threshold_days, created_by, created_at, updated_at
 		FROM boards
 		WHERE id = $1 AND deleted_at IS NULL`
 
 	b := &models.Board{}
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&b.ID, &b.TeamID, &b.Name, &b.Description, &b.Background, &b.Visibility,
-		&b.IsTemplate, &b.IsArchived, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt,
+		&b.IsTemplate, &b.IsArchived, &b.StaleThresholdDays, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("board not found")
@@ -49,7 +49,7 @@ func (r *BoardRepo) FindByID(ctx context.Context, id string) (*models.Board, err
 
 func (r *BoardRepo) ListByTeam(ctx context.Context, teamID string) ([]models.Board, error) {
 	const q = `
-		SELECT id, team_id, name, description, background, visibility, is_template, is_archived, created_by, created_at, updated_at
+		SELECT id, team_id, name, description, background, visibility, is_template, is_archived, stale_threshold_days, created_by, created_at, updated_at
 		FROM boards
 		WHERE team_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC`
@@ -65,7 +65,7 @@ func (r *BoardRepo) ListByTeam(ctx context.Context, teamID string) ([]models.Boa
 		var b models.Board
 		if err := rows.Scan(
 			&b.ID, &b.TeamID, &b.Name, &b.Description, &b.Background, &b.Visibility,
-			&b.IsTemplate, &b.IsArchived, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt,
+			&b.IsTemplate, &b.IsArchived, &b.StaleThresholdDays, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -92,7 +92,7 @@ func (r *BoardRepo) SetTemplate(ctx context.Context, id string, isTemplate bool)
 func (r *BoardRepo) ListTemplatesForUser(ctx context.Context, userID string) ([]models.Board, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT b.id, b.team_id, b.name, b.description, b.background, b.visibility::text,
-		       b.is_template, b.is_archived, b.created_by, b.created_at, b.updated_at
+		       b.is_template, b.is_archived, b.stale_threshold_days, b.created_by, b.created_at, b.updated_at
 		FROM boards b
 		JOIN team_members tm ON tm.team_id = b.team_id
 		WHERE b.is_template = TRUE AND b.deleted_at IS NULL AND tm.user_id = $1
@@ -106,7 +106,7 @@ func (r *BoardRepo) ListTemplatesForUser(ctx context.Context, userID string) ([]
 	for rows.Next() {
 		var b models.Board
 		if err := rows.Scan(&b.ID, &b.TeamID, &b.Name, &b.Description, &b.Background, &b.Visibility,
-			&b.IsTemplate, &b.IsArchived, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt); err != nil {
+			&b.IsTemplate, &b.IsArchived, &b.StaleThresholdDays, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, b)
@@ -221,6 +221,22 @@ func (r *BoardRepo) Update(ctx context.Context, id string, name, description, ba
 		UPDATE boards SET name = $2, description = $3, background = $4
 		WHERE id = $1 AND deleted_at IS NULL`
 	ct, err := r.pool.Exec(ctx, q, id, name, description, background)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("board not found")
+	}
+	return nil
+}
+
+func (r *BoardRepo) UpdateStaleThreshold(ctx context.Context, id string, days int) error {
+	if days < 1 || days > 365 {
+		return fmt.Errorf("stale threshold must be between 1 and 365 days")
+	}
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE boards SET stale_threshold_days = $2 WHERE id = $1 AND deleted_at IS NULL`,
+		id, days)
 	if err != nil {
 		return err
 	}

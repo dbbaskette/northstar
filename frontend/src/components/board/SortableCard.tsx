@@ -6,9 +6,10 @@ import CardItem from '../card/CardItem'
 interface Props {
   card: BoardCard
   onCardClick: (cardId: string) => void
+  staleThresholdDays?: number
 }
 
-export default function SortableCard({ card, onCardClick }: Props) {
+export default function SortableCard({ card, onCardClick, staleThresholdDays }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, data: { type: 'card', listId: card.list_id } })
 
@@ -42,7 +43,11 @@ export default function SortableCard({ card, onCardClick }: Props) {
       {...attributes}
       {...listeners}
     >
-      <CardItem card={card} onClick={() => onCardClick(card.id)} />
+      <CardItem
+        card={card}
+        onClick={() => onCardClick(card.id)}
+        staleThresholdDays={staleThresholdDays}
+      />
     </div>
   )
 }

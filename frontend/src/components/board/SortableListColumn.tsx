@@ -15,9 +15,10 @@ interface Props {
   boardId: string
   list: BoardList
   onCardClick: (cardId: string) => void
+  staleThresholdDays?: number
 }
 
-export default function SortableListColumn({ boardId, list, onCardClick }: Props) {
+export default function SortableListColumn({ boardId, list, onCardClick, staleThresholdDays }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: list.id, data: { type: 'list' } })
 
@@ -119,7 +120,12 @@ export default function SortableListColumn({ boardId, list, onCardClick }: Props
       <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-2 overflow-y-auto px-1 min-h-1">
           {(list.cards || []).map((card) => (
-            <SortableCard key={card.id} card={card} onCardClick={onCardClick} />
+            <SortableCard
+              key={card.id}
+              card={card}
+              onCardClick={onCardClick}
+              staleThresholdDays={staleThresholdDays}
+            />
           ))}
         </div>
       </SortableContext>

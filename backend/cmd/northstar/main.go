@@ -225,6 +225,7 @@ func main() {
 				r.Patch("/", boardHandler.Update)
 				r.Delete("/", boardHandler.Delete)
 				r.Patch("/visibility", boardHandler.UpdateVisibility)
+				r.Patch("/stale-threshold", boardHandler.UpdateStaleThreshold)
 				r.Post("/copy", boardHandler.Copy)
 				r.Patch("/template", templateHandler.ToggleTemplate)
 				r.Get("/members", boardHandler.ListMembers)

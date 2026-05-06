@@ -10,6 +10,7 @@ export interface Board {
   visibility: 'team' | 'private'
   is_template: boolean
   is_archived: boolean
+  stale_threshold_days: number
   created_by: string
   created_at: string
   updated_at: string
@@ -39,6 +40,7 @@ export interface BoardCard {
   completed_at?: { Time: string; Valid: boolean } | null
   is_archived: boolean
   created_at?: string
+  updated_at?: string
   checklist_total?: number
   checklist_done?: number
   attachment_count?: number
@@ -74,6 +76,19 @@ export function useBoard(boardId: string | null) {
       return res.data
     },
     enabled: !!boardId,
+  })
+}
+
+export function useUpdateStaleThreshold(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (days: number) => {
+      const res = await api.patch(`/boards/${boardId}/stale-threshold`, { days })
+      return res.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+    },
   })
 }
 

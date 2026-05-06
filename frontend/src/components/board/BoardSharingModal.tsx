@@ -10,7 +10,7 @@ import { useCreateInvite, useDeleteInvite, useInvites } from '@/api/invites'
 import { useToggleTemplate } from '@/api/templates'
 import { useCreateWebhook, useDeleteWebhook, useWebhooks } from '@/api/webhooks'
 import { useUsers } from '@/api/users'
-import type { Board } from '@/api/boards'
+import { useUpdateStaleThreshold, type Board } from '@/api/boards'
 import Avatar from '../ui/Avatar'
 
 interface Props {
@@ -32,6 +32,10 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
   const { data: webhooks = [] } = useWebhooks(open ? board.id : null)
   const createWebhook = useCreateWebhook(board.id)
   const deleteWebhook = useDeleteWebhook(board.id)
+  const updateStaleThreshold = useUpdateStaleThreshold(board.id)
+  const [staleDraft, setStaleDraft] = useState<string>(
+    String(board.stale_threshold_days || 14),
+  )
   const [newWebhookUrl, setNewWebhookUrl] = useState('')
   const [newWebhookFormat, setNewWebhookFormat] = useState<'raw' | 'google_chat'>('raw')
   const [showWebhookSecret, setShowWebhookSecret] = useState<string | null>(null)
@@ -219,6 +223,50 @@ export default function BoardSharingModal({ open, board, onClose }: Props) {
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Templates show up under "My templates" when creating a new board.
             </p>
+          </section>
+
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Stale card threshold
+              </span>
+            </div>
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+              Cards with no edit in this many days get an aging dot on the board.
+            </p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const days = parseInt(staleDraft, 10)
+                if (isNaN(days)) return
+                try {
+                  await updateStaleThreshold.mutateAsync(days)
+                  setError('')
+                } catch (err) {
+                  const e = err as { response?: { data?: { error?: string } } }
+                  setError(e.response?.data?.error || 'Could not save threshold')
+                }
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={staleDraft}
+                onChange={(e) => setStaleDraft(e.target.value)}
+                aria-label="Stale threshold in days"
+                className="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700"
+              />
+              <span className="text-xs text-gray-500">days</span>
+              <button
+                type="submit"
+                disabled={String(board.stale_threshold_days) === staleDraft}
+                className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                Save
+              </button>
+            </form>
           </section>
 
           <section>
