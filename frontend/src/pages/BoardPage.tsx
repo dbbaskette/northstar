@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Archive, Share2, Lock, Copy } from 'lucide-react'
+import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid } from 'lucide-react'
 import { useBoard, useCopyBoard } from '@/api/boards'
 import BoardView from '@/components/board/BoardView'
+import BoardCalendarView from '@/components/board/BoardCalendarView'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import BoardSharingModal from '@/components/board/BoardSharingModal'
 import CardModal from '@/components/card/CardModal'
@@ -18,6 +19,7 @@ export default function BoardPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
+  const [view, setView] = useState<'board' | 'calendar'>('board')
 
   const copyBoard = useCopyBoard()
 
@@ -68,6 +70,28 @@ export default function BoardPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex gap-0.5 rounded-lg bg-white/20 p-0.5">
+            <button
+              onClick={() => setView('board')}
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${
+                view === 'board' ? 'bg-white/30' : 'hover:bg-white/10'
+              }`}
+              title="Board view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Board
+            </button>
+            <button
+              onClick={() => setView('calendar')}
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${
+                view === 'calendar' ? 'bg-white/30' : 'hover:bg-white/10'
+              }`}
+              title="Calendar view"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              Calendar
+            </button>
+          </div>
           <BoardFilters board={board} onChange={setFilter} />
           <button
             onClick={async () => {
@@ -109,7 +133,11 @@ export default function BoardPage() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-hidden">
-          <BoardView board={board} onCardClick={setActiveCardId} filter={filter} />
+          {view === 'board' ? (
+            <BoardView board={board} onCardClick={setActiveCardId} filter={filter} />
+          ) : (
+            <BoardCalendarView board={board} onCardClick={setActiveCardId} />
+          )}
         </div>
         {showActivity && (
           <aside className="w-80 overflow-y-auto border-l border-black/10 bg-white/95 backdrop-blur">
