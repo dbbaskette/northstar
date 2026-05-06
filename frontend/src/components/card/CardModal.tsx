@@ -173,11 +173,11 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="my-8 w-full max-w-2xl rounded-xl bg-white shadow-xl dark:bg-gray-800"
+        className="min-h-screen w-full max-w-2xl bg-white shadow-xl sm:my-8 sm:min-h-0 sm:rounded-xl dark:bg-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between border-b border-gray-200 p-6 dark:border-gray-700">

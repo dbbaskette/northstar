@@ -5,7 +5,11 @@ import { useTeams } from '@/api/teams'
 import { useAppStore } from '@/stores/appStore'
 import CreateTeamModal from '../team/CreateTeamModal'
 
-export default function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void
+}
+
+export default function Sidebar({ onNavigate }: SidebarProps = {}) {
   const { data: teams = [], isLoading } = useTeams()
   const activeTeamId = useAppStore((s) => s.activeTeamId)
   const setActiveTeam = useAppStore((s) => s.setActiveTeam)
@@ -31,6 +35,7 @@ export default function Sidebar() {
         <nav className="flex-1 space-y-1 p-3">
           <Link
             to="/dashboard"
+            onClick={onNavigate}
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             <LayoutDashboard className="h-4 w-4" />
@@ -67,7 +72,10 @@ export default function Sidebar() {
             {teams.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setActiveTeam(t.id)}
+                onClick={() => {
+                  setActiveTeam(t.id)
+                  onNavigate?.()
+                }}
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
                   activeTeamId === t.id
                     ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'

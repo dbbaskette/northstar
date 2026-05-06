@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LogOut, Search } from 'lucide-react'
+import { LogOut, Search, Menu } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useMe } from '@/api/users'
 import Avatar from '../ui/Avatar'
@@ -8,13 +8,16 @@ import SearchModal from '../search/SearchModal'
 import ThemeToggle from './ThemeToggle'
 import NotificationsBell from './NotificationsBell'
 
-export default function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void
+}
+
+export default function Header({ onMenuClick }: HeaderProps = {}) {
   const authUser = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const { data: me } = useMe()
   const [searchOpen, setSearchOpen] = useState(false)
 
-  // Prefer the live profile (avatar updates immediately) over the stale auth user
   const user = me
     ? {
         id: me.id,
@@ -38,21 +41,35 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-6 dark:border-gray-700 dark:bg-gray-800">
-        <button
-          onClick={() => setSearchOpen(true)}
-          className="flex w-72 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-500 hover:border-gray-300 hover:bg-white dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-600"
-        >
-          <Search className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-          <span className="flex-1 text-left">Search cards…</span>
-          <kbd className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400">
-            ⌘K
-          </kbd>
-        </button>
+      <header className="flex h-14 items-center justify-between gap-3 border-b border-gray-200 bg-white px-3 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-1 items-center gap-2 min-w-0">
+          {onMenuClick && (
+            <button
+              onClick={onMenuClick}
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 md:hidden dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              title="Open menu"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex flex-1 max-w-xs items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-500 hover:border-gray-300 hover:bg-white sm:flex-none sm:w-72 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-600"
+          >
+            <Search className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+            <span className="flex-1 truncate text-left">Search cards…</span>
+            <kbd className="hidden rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-500 sm:inline dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <NotificationsBell />
-          <ThemeToggle />
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
           {user && (
             <Link
               to="/profile"
@@ -60,7 +77,9 @@ export default function Header() {
               title="Profile"
             >
               <Avatar user={user} size="sm" />
-              <span className="text-sm text-gray-700 dark:text-gray-200">{user.display_name}</span>
+              <span className="hidden text-sm text-gray-700 sm:inline dark:text-gray-200">
+                {user.display_name}
+              </span>
             </Link>
           )}
           <button
