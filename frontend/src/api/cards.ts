@@ -76,6 +76,7 @@ export function useUpdateCard(boardId: string, cardId?: string) {
       title?: string
       description?: string
       due_date?: string | null
+      start_date?: string | null
       priority?: string | null
       completed?: boolean
     }) => {
@@ -83,6 +84,7 @@ export function useUpdateCard(boardId: string, cardId?: string) {
         title: input.title || '',
         description: input.description || '',
         due_date: input.due_date,
+        start_date: input.start_date,
         priority: input.priority,
         completed: input.completed,
       })

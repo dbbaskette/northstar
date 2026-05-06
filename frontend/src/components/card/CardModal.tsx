@@ -43,6 +43,7 @@ import {
   cardDescription,
   cardDueDate,
   cardPriority,
+  cardStartDate,
 } from '@/lib/cardHelpers'
 import { useHotkey } from '@/hooks/useHotkeys'
 
@@ -106,13 +107,16 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
 
   const priority = card ? cardPriority(card) : null
   const dueDate = card ? cardDueDate(card) : null
+  const startDate = card ? cardStartDate(card) : null
   const completedAt = card ? cardCompletedAt(card) : null
   const dueDateInputValue = dueDate ? dueDate.toISOString().split('T')[0] : ''
+  const startDateInputValue = startDate ? startDate.toISOString().split('T')[0] : ''
 
   const buildUpdate = (overrides: Partial<{
     title: string
     description: string
     due_date: string | null
+    start_date: string | null
     priority: string | null
     completed: boolean
   }> = {}) => {
@@ -126,6 +130,12 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
           ? overrides.due_date
           : dueDate
             ? dueDate.toISOString()
+            : null,
+      start_date:
+        'start_date' in overrides
+          ? overrides.start_date
+          : startDate
+            ? startDate.toISOString()
             : null,
       priority: 'priority' in overrides ? overrides.priority : priority,
       ...(overrides.completed !== undefined ? { completed: overrides.completed } : {}),
@@ -150,6 +160,12 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
   const handleSetDueDate = async (date: string) => {
     if (!card) return
     const update = buildUpdate({ due_date: date ? new Date(date).toISOString() : null })
+    if (update) await updateCard.mutateAsync(update)
+  }
+
+  const handleSetStartDate = async (date: string) => {
+    if (!card) return
+    const update = buildUpdate({ start_date: date ? new Date(date).toISOString() : null })
     if (update) await updateCard.mutateAsync(update)
   }
 
@@ -311,25 +327,46 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
               <div>
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700">
                   <Calendar className="h-4 w-4" />
-                  Due date
+                  Schedule
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={dueDateInputRef}
-                    type="date"
-                    value={dueDateInputValue}
-                    onChange={(e) => handleSetDueDate(e.target.value)}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  />
-                  {dueDateInputValue && (
-                    <button
-                      onClick={() => handleSetDueDate('')}
-                      className="rounded p-1 text-gray-400 hover:bg-gray-100"
-                      title="Clear due date"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-12 text-xs text-gray-500">Start</span>
+                    <input
+                      type="date"
+                      value={startDateInputValue}
+                      onChange={(e) => handleSetStartDate(e.target.value)}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                    {startDateInputValue && (
+                      <button
+                        onClick={() => handleSetStartDate('')}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-100"
+                        aria-label="Clear start date"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-12 text-xs text-gray-500">Due</span>
+                    <input
+                      ref={dueDateInputRef}
+                      type="date"
+                      value={dueDateInputValue}
+                      onChange={(e) => handleSetDueDate(e.target.value)}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                    {dueDateInputValue && (
+                      <button
+                        onClick={() => handleSetDueDate('')}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-100"
+                        aria-label="Clear due date"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

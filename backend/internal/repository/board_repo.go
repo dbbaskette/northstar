@@ -290,7 +290,7 @@ func (r *BoardRepo) GetFullBoard(ctx context.Context, id string) (*models.Board,
 	}
 
 	cardsQ := `
-		SELECT id, list_id, title, description, position, priority, due_date, completed_at,
+		SELECT id, list_id, title, description, position, priority, start_date, due_date, completed_at,
 		       cover_attachment_id, cover_color, cover_size::text,
 		       is_archived, created_by, created_at, updated_at
 		FROM cards
@@ -315,7 +315,7 @@ func (r *BoardRepo) GetFullBoard(ctx context.Context, id string) (*models.Board,
 			var c models.Card
 			if err := cardRows.Scan(
 				&c.ID, &c.ListID, &c.Title, &c.Description, &c.Position,
-				&c.Priority, &c.DueDate, &c.CompletedAt,
+				&c.Priority, &c.StartDate, &c.DueDate, &c.CompletedAt,
 				&c.CoverAttachmentID, &c.CoverColor, &c.CoverSize,
 				&c.IsArchived,
 				&c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,

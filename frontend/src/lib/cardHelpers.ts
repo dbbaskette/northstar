@@ -39,6 +39,11 @@ export function cardDueDate(card: BoardCard): Date | null {
   return v ? new Date(v) : null
 }
 
+export function cardStartDate(card: BoardCard): Date | null {
+  const v = flatString(card.start_date as unknown)
+  return v ? new Date(v) : null
+}
+
 export function cardCompletedAt(card: BoardCard): Date | null {
   const v = flatString(card.completed_at as unknown)
   return v ? new Date(v) : null

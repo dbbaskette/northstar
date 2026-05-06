@@ -20,14 +20,14 @@ func NewCardRepo(pool *pgxpool.Pool) *CardRepo {
 	return &CardRepo{pool: pool}
 }
 
-const cardSelectColumns = `id, list_id, title, description, position, priority, due_date, completed_at,
+const cardSelectColumns = `id, list_id, title, description, position, priority, start_date, due_date, completed_at,
 		cover_attachment_id, cover_color, cover_size::text,
 		is_archived, created_by, created_at, updated_at`
 
 func scanCard(row pgx.Row, c *models.Card) error {
 	return row.Scan(
 		&c.ID, &c.ListID, &c.Title, &c.Description, &c.Position,
-		&c.Priority, &c.DueDate, &c.CompletedAt,
+		&c.Priority, &c.StartDate, &c.DueDate, &c.CompletedAt,
 		&c.CoverAttachmentID, &c.CoverColor, &c.CoverSize,
 		&c.IsArchived, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
 	)
@@ -71,14 +71,19 @@ type CardUpdate struct {
 	Title       string
 	Description string
 	DueDate     *time.Time
+	StartDate   *time.Time
 	Priority    *string
-	Completed  *bool
+	Completed   *bool
 }
 
 func (r *CardRepo) Update(ctx context.Context, id string, u CardUpdate) error {
 	var dueDate pgtype.Timestamptz
 	if u.DueDate != nil {
 		dueDate = pgtype.Timestamptz{Time: *u.DueDate, Valid: true}
+	}
+	var startDate pgtype.Timestamptz
+	if u.StartDate != nil {
+		startDate = pgtype.Timestamptz{Time: *u.StartDate, Valid: true}
 	}
 
 	var priority pgtype.Text
@@ -92,6 +97,7 @@ func (r *CardRepo) Update(ctx context.Context, id string, u CardUpdate) error {
 		    description = $3,
 		    due_date = $4,
 		    priority = $5,
+		    start_date = $7,
 		    completed_at = CASE
 		        WHEN $6::boolean IS NULL THEN completed_at
 		        WHEN $6::boolean = TRUE  AND completed_at IS NULL THEN NOW()
@@ -100,7 +106,7 @@ func (r *CardRepo) Update(ctx context.Context, id string, u CardUpdate) error {
 		    END
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	ct, err := r.pool.Exec(ctx, q, id, u.Title, u.Description, dueDate, priority, u.Completed)
+	ct, err := r.pool.Exec(ctx, q, id, u.Title, u.Description, dueDate, priority, u.Completed, startDate)
 	if err != nil {
 		return err
 	}

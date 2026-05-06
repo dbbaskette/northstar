@@ -23,6 +23,7 @@ type Card struct {
 	Description       pgtype.Text        `json:"description,omitempty"`
 	Position          float64            `json:"position"`
 	Priority          pgtype.Text        `json:"priority,omitempty"`
+	StartDate         pgtype.Timestamptz `json:"start_date,omitempty"`
 	DueDate           pgtype.Timestamptz `json:"due_date,omitempty"`
 	CompletedAt       pgtype.Timestamptz `json:"completed_at,omitempty"`
 	CoverAttachmentID pgtype.UUID        `json:"cover_attachment_id,omitempty"`

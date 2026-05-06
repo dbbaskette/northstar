@@ -36,6 +36,7 @@ export interface BoardCard {
   description?: { String: string; Valid: boolean } | string | null
   position: number
   priority?: { String: CardPriority; Valid: boolean } | null
+  start_date?: { Time: string; Valid: boolean } | null
   due_date?: { Time: string; Valid: boolean } | null
   completed_at?: { Time: string; Valid: boolean } | null
   is_archived: boolean

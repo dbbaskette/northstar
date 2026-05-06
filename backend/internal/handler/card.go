@@ -47,6 +47,7 @@ type updateCardRequest struct {
 	Title       string  `json:"title"`
 	Description string  `json:"description"`
 	DueDate     *string `json:"due_date"`
+	StartDate   *string `json:"start_date"`
 	Priority    *string `json:"priority"`
 	Completed   *bool   `json:"completed"`
 }
@@ -172,6 +173,16 @@ func (h *CardHandler) Update(w http.ResponseWriter, r *http.Request) {
 		dueDate = &t
 	}
 
+	var startDate *time.Time
+	if req.StartDate != nil && *req.StartDate != "" {
+		t, err := time.Parse(time.RFC3339, *req.StartDate)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid start_date format, use RFC3339")
+			return
+		}
+		startDate = &t
+	}
+
 	if req.Priority != nil && *req.Priority != "" {
 		switch *req.Priority {
 		case "low", "medium", "high", "urgent":
@@ -186,6 +197,7 @@ func (h *CardHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Title:       req.Title,
 		Description: req.Description,
 		DueDate:     dueDate,
+		StartDate:   startDate,
 		Priority:    req.Priority,
 		Completed:   req.Completed,
 	}); err != nil {

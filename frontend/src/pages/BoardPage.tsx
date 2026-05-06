@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, Zap } from 'lucide-react'
+import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, GanttChart, Zap } from 'lucide-react'
 import { useBoard, useCopyBoard } from '@/api/boards'
 import { hotkeysBus, useHotkey } from '@/hooks/useHotkeys'
 import BoardView from '@/components/board/BoardView'
 import BoardCalendarView from '@/components/board/BoardCalendarView'
+import BoardTimelineView from '@/components/board/BoardTimelineView'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import BoardSharingModal from '@/components/board/BoardSharingModal'
 import AutomationsModal from '@/components/board/AutomationsModal'
@@ -23,7 +24,7 @@ export default function BoardPage() {
   const [showShare, setShowShare] = useState(false)
   const [showAutomation, setShowAutomation] = useState(false)
   const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
-  const [view, setView] = useState<'board' | 'calendar'>('board')
+  const [view, setView] = useState<'board' | 'calendar' | 'timeline'>('board')
 
   const copyBoard = useCopyBoard()
 
@@ -105,6 +106,16 @@ export default function BoardPage() {
               <Calendar className="h-3.5 w-3.5" />
               Calendar
             </button>
+            <button
+              onClick={() => setView('timeline')}
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${
+                view === 'timeline' ? 'bg-white/30' : 'hover:bg-white/10'
+              }`}
+              title="Timeline view"
+            >
+              <GanttChart className="h-3.5 w-3.5" />
+              Timeline
+            </button>
           </div>
           <BoardFilters board={board} onChange={setFilter} />
           <button
@@ -163,8 +174,10 @@ export default function BoardPage() {
         <div className="flex-1 overflow-hidden">
           {view === 'board' ? (
             <BoardView board={board} onCardClick={setActiveCardId} filter={filter} />
-          ) : (
+          ) : view === 'calendar' ? (
             <BoardCalendarView board={board} onCardClick={setActiveCardId} />
+          ) : (
+            <BoardTimelineView board={board} onCardClick={setActiveCardId} />
           )}
         </div>
         {showActivity && (
