@@ -89,6 +89,7 @@ func main() {
 	wsHandler := handler.NewWSHandler(hub, authService)
 	checklistHandler := handler.NewChecklistHandler(checklistRepo, cardRepo, listRepo, events)
 	attachmentHandler := handler.NewAttachmentHandler(attachmentRepo, cardRepo, listRepo, store, events)
+	archiveHandler := handler.NewArchiveHandler(cardRepo, listRepo, events)
 
 	r := chi.NewRouter()
 
@@ -144,6 +145,7 @@ func main() {
 				r.Post("/lists", listHandler.Create)
 				r.Post("/labels", labelHandler.Create)
 				r.Get("/activity", activityHandler.ListByBoard)
+				r.Get("/archived", archiveHandler.ListArchived)
 			})
 
 			r.Route("/lists/{listId}", func(r chi.Router) {
@@ -151,12 +153,16 @@ func main() {
 				r.Delete("/", listHandler.Archive)
 				r.Patch("/reorder", listHandler.Reorder)
 				r.Post("/cards", cardHandler.Create)
+				r.Post("/restore", archiveHandler.RestoreList)
+				r.Delete("/permanent", archiveHandler.PermanentDeleteList)
 			})
 
 			r.Route("/cards/{cardId}", func(r chi.Router) {
 				r.Get("/", cardHandler.Get)
 				r.Patch("/", cardHandler.Update)
 				r.Delete("/", cardHandler.Delete)
+				r.Post("/restore", archiveHandler.RestoreCard)
+				r.Delete("/permanent", archiveHandler.PermanentDeleteCard)
 				r.Patch("/move", cardHandler.Move)
 				r.Patch("/reorder", cardHandler.Reorder)
 

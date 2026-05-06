@@ -87,3 +87,48 @@ func (r *ListRepo) Reorder(ctx context.Context, id string, position float64) err
 	}
 	return nil
 }
+
+func (r *ListRepo) Restore(ctx context.Context, id string) error {
+	ct, err := r.pool.Exec(ctx, `UPDATE lists SET is_archived = FALSE WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("list not found")
+	}
+	return nil
+}
+
+func (r *ListRepo) PermanentDelete(ctx context.Context, id string) error {
+	ct, err := r.pool.Exec(ctx, `DELETE FROM lists WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("list not found")
+	}
+	return nil
+}
+
+func (r *ListRepo) ListArchivedByBoard(ctx context.Context, boardID string) ([]models.List, error) {
+	const q = `
+		SELECT id, board_id, name, position, is_archived, created_at, updated_at
+		FROM lists
+		WHERE board_id = $1 AND is_archived = TRUE
+		ORDER BY updated_at DESC`
+	rows, err := r.pool.Query(ctx, q, boardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.List
+	for rows.Next() {
+		var l models.List
+		if err := rows.Scan(&l.ID, &l.BoardID, &l.Name, &l.Position, &l.IsArchived, &l.CreatedAt, &l.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}

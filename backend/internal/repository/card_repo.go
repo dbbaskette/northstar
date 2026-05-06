@@ -120,6 +120,61 @@ func (r *CardRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *CardRepo) Restore(ctx context.Context, id string) error {
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE cards SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL`, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("card not found or not archived")
+	}
+	return nil
+}
+
+func (r *CardRepo) PermanentDelete(ctx context.Context, id string) error {
+	ct, err := r.pool.Exec(ctx, `DELETE FROM cards WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("card not found")
+	}
+	return nil
+}
+
+func (r *CardRepo) ListArchivedByBoard(ctx context.Context, boardID string) ([]models.Card, error) {
+	q := `
+		SELECT c.id, c.list_id, c.title, c.description, c.position, c.priority,
+		       c.due_date, c.completed_at, c.is_archived, c.created_by,
+		       c.created_at, c.updated_at, c.deleted_at
+		FROM cards c
+		JOIN lists l ON c.list_id = l.id
+		WHERE l.board_id = $1 AND c.deleted_at IS NOT NULL
+		ORDER BY c.deleted_at DESC
+		LIMIT 200`
+
+	rows, err := r.pool.Query(ctx, q, boardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Card
+	for rows.Next() {
+		var c models.Card
+		if err := rows.Scan(
+			&c.ID, &c.ListID, &c.Title, &c.Description, &c.Position,
+			&c.Priority, &c.DueDate, &c.CompletedAt, &c.IsArchived,
+			&c.CreatedBy, &c.CreatedAt, &c.UpdatedAt, &c.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func (r *CardRepo) Move(ctx context.Context, id, listID string, position float64) error {
 	const q = `
 		UPDATE cards SET list_id = $2, position = $3

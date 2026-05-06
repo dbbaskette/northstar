@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Archive } from 'lucide-react'
 import { useBoard } from '@/api/boards'
 import BoardView from '@/components/board/BoardView'
 import CardModal from '@/components/card/CardModal'
 import ActivityFeed from '@/components/activity/ActivityFeed'
+import ArchivedPanel from '@/components/board/ArchivedPanel'
 import { useBoardWebSocket } from '@/hooks/useWebSocket'
 
 export default function BoardPage() {
@@ -12,6 +13,7 @@ export default function BoardPage() {
   const { data: board, isLoading, error } = useBoard(boardId || null)
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
   const [showActivity, setShowActivity] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   useBoardWebSocket(boardId || null)
 
@@ -50,12 +52,22 @@ export default function BoardPage() {
           </Link>
           <h2 className="text-lg font-semibold">{board.name}</h2>
         </div>
-        <button
-          onClick={() => setShowActivity(!showActivity)}
-          className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
-        >
-          {showActivity ? 'Hide activity' : 'Show activity'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowArchived(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
+            title="Archived items"
+          >
+            <Archive className="h-3.5 w-3.5" />
+            Archived
+          </button>
+          <button
+            onClick={() => setShowActivity(!showActivity)}
+            className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
+          >
+            {showActivity ? 'Hide activity' : 'Show activity'}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -74,6 +86,11 @@ export default function BoardPage() {
         cardId={activeCardId}
         board={board}
         onClose={() => setActiveCardId(null)}
+      />
+      <ArchivedPanel
+        open={showArchived}
+        boardId={board.id}
+        onClose={() => setShowArchived(false)}
       />
     </div>
   )
