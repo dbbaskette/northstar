@@ -20,8 +20,10 @@ build: build-frontend build-backend
 
 build-frontend:
 	cd frontend && npm ci && npm run build
-	rm -rf backend/internal/static/dist
-	cp -r frontend/dist backend/internal/static/dist
+	# Wipe everything except the .gitkeep placeholder so the directory
+	# stays in git (the //go:embed directive requires it at compile time).
+	find backend/internal/static/dist -mindepth 1 ! -name '.gitkeep' -delete
+	cp -r frontend/dist/. backend/internal/static/dist/
 
 build-backend:
 	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../$(BINARY_NAME)-linux-amd64 ./cmd/northstar
@@ -29,8 +31,10 @@ build-backend:
 # Local production-style build: native binary with embedded frontend.
 build-local:
 	cd frontend && npm run build
-	rm -rf backend/internal/static/dist
-	cp -r frontend/dist backend/internal/static/dist
+	# Wipe everything except the .gitkeep placeholder so the directory
+	# stays in git (the //go:embed directive requires it at compile time).
+	find backend/internal/static/dist -mindepth 1 ! -name '.gitkeep' -delete
+	cp -r frontend/dist/. backend/internal/static/dist/
 	cd backend && go build -o ../$(BINARY_NAME) ./cmd/northstar
 
 test:
