@@ -98,19 +98,38 @@ export default function DashboardPage() {
           />
         ) : !boardsLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {boards.map((board) => (
-              <Link
-                key={board.id}
-                to={`/boards/${board.id}`}
-                className="group flex h-32 flex-col justify-between rounded-lg p-4 text-white shadow-sm transition hover:shadow-md"
-                style={{ backgroundColor: board.background }}
-              >
-                <span className="font-semibold">{board.name}</span>
-                <span className="text-xs opacity-75">
-                  Created {new Date(board.created_at).toLocaleDateString()}
-                </span>
-              </Link>
-            ))}
+            {boards.map((board) => {
+              const isImg =
+                board.background?.startsWith('/api/') ||
+                board.background?.startsWith('http://') ||
+                board.background?.startsWith('https://')
+              const tileStyle = isImg
+                ? {
+                    backgroundImage: `url("${board.background}")`,
+                    backgroundSize: 'cover' as const,
+                    backgroundPosition: 'center',
+                  }
+                : { backgroundColor: board.background }
+              return (
+                <Link
+                  key={board.id}
+                  to={`/boards/${board.id}`}
+                  className="group relative flex h-32 flex-col justify-between overflow-hidden rounded-lg p-4 text-white shadow-sm transition hover:shadow-md"
+                  style={tileStyle}
+                >
+                  {isImg && (
+                    <span
+                      className="absolute inset-0 bg-gradient-to-br from-black/0 via-black/0 to-black/40"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="relative font-semibold drop-shadow">{board.name}</span>
+                  <span className="relative text-xs opacity-90 drop-shadow">
+                    Created {new Date(board.created_at).toLocaleDateString()}
+                  </span>
+                </Link>
+              )
+            })}
 
             <button
               onClick={() => setCreateBoardOpen(true)}

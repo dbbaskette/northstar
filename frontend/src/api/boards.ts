@@ -82,6 +82,45 @@ export function useBoard(boardId: string | null) {
   })
 }
 
+export function useUpdateBoard(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      name: string
+      description?: string
+      background?: string
+    }) => {
+      await api.patch(`/boards/${boardId}`, {
+        name: input.name,
+        description: input.description ?? '',
+        background: input.background ?? '',
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+      qc.invalidateQueries({ queryKey: ['boards'] })
+    },
+  })
+}
+
+export function useUploadBoardBackground(boardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await api.post(`/boards/${boardId}/background`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return res.data as { background: string }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['board', boardId] })
+      qc.invalidateQueries({ queryKey: ['boards'] })
+    },
+  })
+}
+
 export function useUpdateStaleThreshold(boardId: string) {
   const qc = useQueryClient()
   return useMutation({

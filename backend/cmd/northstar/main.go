@@ -128,7 +128,7 @@ func main() {
 
 	authHandler := handler.NewAuthHandler(authService, auditRepo)
 	teamHandler := handler.NewTeamHandler(teamRepo, auditRepo)
-	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo, boardCopier, auditRepo, voteRepo)
+	boardHandler := handler.NewBoardHandler(boardRepo, teamRepo, boardCopier, auditRepo, voteRepo, store)
 	listHandler := handler.NewListHandler(listRepo, events, boardCopier)
 	cardHandler := handler.NewCardHandler(cardRepo, listRepo, events, mentions, cardCopier)
 	commentHandler := handler.NewCommentHandler(commentRepo, cardRepo, listRepo, events, mentions)
@@ -276,6 +276,8 @@ func main() {
 				r.Delete("/", boardHandler.Delete)
 				r.Patch("/visibility", boardHandler.UpdateVisibility)
 				r.Patch("/stale-threshold", boardHandler.UpdateStaleThreshold)
+				r.Get("/background", boardHandler.DownloadBackground)
+				r.Post("/background", boardHandler.UploadBackground)
 				r.Post("/copy", boardHandler.Copy)
 				r.Patch("/template", templateHandler.ToggleTemplate)
 				r.Get("/members", boardHandler.ListMembers)

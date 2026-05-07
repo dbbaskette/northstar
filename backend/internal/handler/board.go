@@ -2,7 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -11,7 +14,10 @@ import (
 	"github.com/dbbaskette/northstar/internal/models"
 	"github.com/dbbaskette/northstar/internal/repository"
 	"github.com/dbbaskette/northstar/internal/service"
+	"github.com/dbbaskette/northstar/internal/storage"
 )
+
+const maxBoardBackgroundSize = 8 * 1024 * 1024 // 8MB
 
 type BoardHandler struct {
 	boardRepo *repository.BoardRepo
@@ -19,6 +25,7 @@ type BoardHandler struct {
 	copier    *service.BoardCopier
 	audit     *repository.AuditRepo
 	voteRepo  *repository.VoteRepo
+	store     storage.Backend
 }
 
 func NewBoardHandler(
@@ -27,6 +34,7 @@ func NewBoardHandler(
 	copier *service.BoardCopier,
 	audit *repository.AuditRepo,
 	voteRepo *repository.VoteRepo,
+	store storage.Backend,
 ) *BoardHandler {
 	return &BoardHandler{
 		boardRepo: boardRepo,
@@ -34,6 +42,7 @@ func NewBoardHandler(
 		copier:    copier,
 		audit:     audit,
 		voteRepo:  voteRepo,
+		store:     store,
 	}
 }
 
@@ -312,6 +321,13 @@ func isValidUserRole(role string) bool {
 
 func (h *BoardHandler) Update(w http.ResponseWriter, r *http.Request) {
 	boardID := chi.URLParam(r, "boardId")
+	userID := middleware.GetUserID(r.Context())
+
+	role, err := h.boardRepo.AccessibleByUser(r.Context(), boardID, userID)
+	if err != nil || (role != "owner" && role != "admin") {
+		writeError(w, http.StatusForbidden, "only board admins can edit board settings")
+		return
+	}
 
 	var req updateBoardRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -325,6 +341,91 @@ func (h *BoardHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+// UploadBackground accepts an image upload, stores it on the storage
+// backend, and points boards.background at the served URL. Image is
+// served via DownloadBackground below — auth-gated like the rest of
+// the board surface.
+func (h *BoardHandler) UploadBackground(w http.ResponseWriter, r *http.Request) {
+	boardID := chi.URLParam(r, "boardId")
+	userID := middleware.GetUserID(r.Context())
+
+	role, err := h.boardRepo.AccessibleByUser(r.Context(), boardID, userID)
+	if err != nil || (role != "owner" && role != "admin") {
+		writeError(w, http.StatusForbidden, "only board admins can change the background")
+		return
+	}
+
+	if err := r.ParseMultipartForm(maxBoardBackgroundSize); err != nil {
+		writeError(w, http.StatusBadRequest, "request too large or invalid")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing 'file' field")
+		return
+	}
+	defer file.Close()
+
+	if header.Size > maxBoardBackgroundSize {
+		writeError(w, http.StatusRequestEntityTooLarge, "background exceeds max 8MB")
+		return
+	}
+	mime := header.Header.Get("Content-Type")
+	if !strings.HasPrefix(mime, "image/") {
+		writeError(w, http.StatusBadRequest, "background must be an image")
+		return
+	}
+
+	ext := filenameExt(header.Filename)
+	// Wipe stale extensions for this board so DownloadBackground doesn't
+	// pick up an older format on top of the new one.
+	for _, e := range []string{".png", ".jpg", ".jpeg", ".gif", ".webp"} {
+		_ = h.store.Delete(fmt.Sprintf("board-backgrounds/%s%s", boardID, e))
+	}
+
+	storageKey := fmt.Sprintf("board-backgrounds/%s%s", boardID, ext)
+	if _, err := h.store.Put(storageKey, io.LimitReader(file, maxBoardBackgroundSize)); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to store background")
+		return
+	}
+
+	// Cache-buster query string keeps every save replacing the prior
+	// rendered image without a hard refresh.
+	url := fmt.Sprintf("/api/v1/boards/%s/background?v=%d", boardID, header.Size)
+	if err := h.boardRepo.UpdateBackground(r.Context(), boardID, url); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"background": url})
+}
+
+// DownloadBackground streams a board's uploaded background image.
+// Auth-gated — caller must have access to the board.
+func (h *BoardHandler) DownloadBackground(w http.ResponseWriter, r *http.Request) {
+	boardID := chi.URLParam(r, "boardId")
+	userID := middleware.GetUserID(r.Context())
+
+	role, err := h.boardRepo.AccessibleByUser(r.Context(), boardID, userID)
+	if err != nil || role == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	for _, ext := range []string{".png", ".jpg", ".jpeg", ".gif", ".webp"} {
+		key := fmt.Sprintf("board-backgrounds/%s%s", boardID, ext)
+		rc, err := h.store.Open(key)
+		if err == nil {
+			defer rc.Close()
+			w.Header().Set("Content-Type", contentTypeForExt(ext))
+			w.Header().Set("Cache-Control", "private, max-age=300")
+			io.Copy(w, rc)
+			return
+		}
+	}
+	http.NotFound(w, r)
 }
 
 func (h *BoardHandler) Copy(w http.ResponseWriter, r *http.Request) {

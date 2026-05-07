@@ -230,6 +230,19 @@ func (r *BoardRepo) Update(ctx context.Context, id string, name, description, ba
 	return nil
 }
 
+func (r *BoardRepo) UpdateBackground(ctx context.Context, id, background string) error {
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE boards SET background = $2 WHERE id = $1 AND deleted_at IS NULL`,
+		id, background)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("board not found")
+	}
+	return nil
+}
+
 func (r *BoardRepo) UpdateStaleThreshold(ctx context.Context, id string, days int) error {
 	if days < 1 || days > 365 {
 		return fmt.Errorf("stale threshold must be between 1 and 365 days")

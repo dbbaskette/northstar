@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, GanttChart, BarChart3, Zap } from 'lucide-react'
+import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, GanttChart, BarChart3, Zap, Settings } from 'lucide-react'
 import { useBoard, useCopyBoard } from '@/api/boards'
 import { hotkeysBus, useHotkey } from '@/hooks/useHotkeys'
 import BoardView from '@/components/board/BoardView'
@@ -10,6 +10,7 @@ import BoardReportsView from '@/components/board/BoardReportsView'
 import BoardPluginsPanel from '@/components/board/BoardPluginsPanel'
 import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board/BoardFilters'
 import BoardSharingModal from '@/components/board/BoardSharingModal'
+import BoardSettingsModal from '@/components/board/BoardSettingsModal'
 import AutomationsModal from '@/components/board/AutomationsModal'
 import WatchToggle from '@/components/ui/WatchToggle'
 import CardModal from '@/components/card/CardModal'
@@ -25,6 +26,7 @@ export default function BoardPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [showAutomation, setShowAutomation] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [filter, setFilter] = useState<FilterState>(EMPTY_FILTER)
   const [view, setView] = useState<'board' | 'calendar' | 'timeline' | 'reports'>('board')
 
@@ -61,11 +63,23 @@ export default function BoardPage() {
     )
   }
 
+  // background can be a hex color (#0079BF) or a URL pointing at an
+  // uploaded image — branch on shape so the UI handles both.
+  const bgIsImage =
+    board.background?.startsWith('/api/') ||
+    board.background?.startsWith('http://') ||
+    board.background?.startsWith('https://')
+  const bgStyle: React.CSSProperties = bgIsImage
+    ? {
+        backgroundImage: `url("${board.background}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : { backgroundColor: board.background }
+
   return (
-    <div
-      className="flex h-full flex-col"
-      style={{ backgroundColor: board.background }}
-    >
+    <div className="flex h-full flex-col" style={bgStyle}>
       <div className="flex items-center justify-between gap-4 border-b border-black/10 bg-black/10 px-6 py-3 text-white backdrop-blur">
         <div className="flex items-center gap-3">
           <Link
@@ -166,6 +180,14 @@ export default function BoardPage() {
             Share
           </button>
           <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
+            title="Board settings"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Settings
+          </button>
+          <button
             onClick={() => setShowArchived(true)}
             className="flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium hover:bg-white/30"
             title="Archived items"
@@ -222,6 +244,11 @@ export default function BoardPage() {
         open={showAutomation}
         board={board}
         onClose={() => setShowAutomation(false)}
+      />
+      <BoardSettingsModal
+        open={showSettings}
+        board={board}
+        onClose={() => setShowSettings(false)}
       />
     </div>
   )
