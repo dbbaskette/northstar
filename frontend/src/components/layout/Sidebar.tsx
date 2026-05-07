@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LayoutDashboard, Lock, Star, Plus, Plug, Users, ShieldCheck, UserCog } from 'lucide-react'
+import { LayoutDashboard, Lock, Star, Plus, Plug, Users, ShieldCheck, UserCog, UserPlus } from 'lucide-react'
 import { useTeams } from '@/api/teams'
 import { useMe } from '@/api/users'
 import { useAppStore } from '@/stores/appStore'
 import CreateTeamModal from '../team/CreateTeamModal'
+import TeamMembersModal from '../team/TeamMembersModal'
 
 interface SidebarProps {
   onNavigate?: () => void
@@ -16,6 +17,7 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
   const activeTeamId = useAppStore((s) => s.activeTeamId)
   const setActiveTeam = useAppStore((s) => s.setActiveTeam)
   const [createOpen, setCreateOpen] = useState(false)
+  const [membersTeamId, setMembersTeamId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!activeTeamId && teams.length > 0) {
@@ -110,27 +112,50 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
             )}
 
             {teams.map((t) => (
-              <button
+              <div
                 key={t.id}
-                onClick={() => {
-                  setActiveTeam(t.id)
-                  onNavigate?.()
-                }}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+                className={`group flex items-center gap-1 rounded-lg pr-1 transition ${
                   activeTeamId === t.id
-                    ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-blue-50 dark:bg-blue-900/30'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                <Users className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{t.name}</span>
-              </button>
+                <button
+                  onClick={() => {
+                    setActiveTeam(t.id)
+                    onNavigate?.()
+                  }}
+                  className={`flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
+                    activeTeamId === t.id
+                      ? 'font-medium text-blue-700 dark:text-blue-300'
+                      : 'text-gray-700 dark:text-gray-200'
+                  }`}
+                >
+                  <Users className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{t.name}</span>
+                </button>
+                <button
+                  onClick={() => setMembersTeamId(t.id)}
+                  aria-label={`Manage members of ${t.name}`}
+                  title="Manage members"
+                  className="rounded p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-white hover:text-gray-700 focus:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         </nav>
       </aside>
 
       <CreateTeamModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      {membersTeamId && (
+        <TeamMembersModal
+          open={!!membersTeamId}
+          teamId={membersTeamId}
+          onClose={() => setMembersTeamId(null)}
+        />
+      )}
     </>
   )
 }

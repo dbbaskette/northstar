@@ -55,3 +55,36 @@ export function useCreateTeam() {
     },
   })
 }
+
+export function useAddTeamMember(teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { userId: string; role?: TeamMember['role'] }) => {
+      await api.post(`/teams/${teamId}/members`, {
+        user_id: input.userId,
+        role: input.role || 'member',
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['team', teamId] }),
+  })
+}
+
+export function useRemoveTeamMember(teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/teams/${teamId}/members/${userId}`)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['team', teamId] }),
+  })
+}
+
+export function useUpdateTeamMember(teamId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { userId: string; role: TeamMember['role'] }) => {
+      await api.patch(`/teams/${teamId}/members/${input.userId}`, { role: input.role })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['team', teamId] }),
+  })
+}
