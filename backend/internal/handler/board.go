@@ -403,16 +403,11 @@ func (h *BoardHandler) UploadBackground(w http.ResponseWriter, r *http.Request) 
 }
 
 // DownloadBackground streams a board's uploaded background image.
-// Auth-gated — caller must have access to the board.
+// Public so it can be loaded by CSS `background-image: url(...)`,
+// which doesn't carry the bearer token. The path is UUID-keyed so
+// it's not enumerable; mirrors how avatars are served.
 func (h *BoardHandler) DownloadBackground(w http.ResponseWriter, r *http.Request) {
 	boardID := chi.URLParam(r, "boardId")
-	userID := middleware.GetUserID(r.Context())
-
-	role, err := h.boardRepo.AccessibleByUser(r.Context(), boardID, userID)
-	if err != nil || role == "" {
-		http.NotFound(w, r)
-		return
-	}
 
 	for _, ext := range []string{".png", ".jpg", ".jpeg", ".gif", ".webp"} {
 		key := fmt.Sprintf("board-backgrounds/%s%s", boardID, ext)

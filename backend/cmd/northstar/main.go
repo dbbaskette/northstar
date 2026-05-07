@@ -190,6 +190,7 @@ func main() {
 		r.Get("/invites/{token}", inviteHandler.Preview)
 		r.Get("/ws", wsHandler.Connect)
 		r.Get("/avatars/{userId}", userHandler.DownloadAvatar)
+		r.Get("/boards/{boardId}/background", boardHandler.DownloadBackground)
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService, apiTokenRepo.LookupByToken))
@@ -276,7 +277,6 @@ func main() {
 				r.Delete("/", boardHandler.Delete)
 				r.Patch("/visibility", boardHandler.UpdateVisibility)
 				r.Patch("/stale-threshold", boardHandler.UpdateStaleThreshold)
-				r.Get("/background", boardHandler.DownloadBackground)
 				r.Post("/background", boardHandler.UploadBackground)
 				r.Post("/copy", boardHandler.Copy)
 				r.Patch("/template", templateHandler.ToggleTemplate)
