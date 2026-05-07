@@ -10,6 +10,8 @@ import { useMemo, useState } from 'react'
 import { MoreHorizontal, Trash2, Copy, ArrowDownAZ, ThumbsUp } from 'lucide-react'
 import SortableCard from './SortableCard'
 import AddCard from '../card/AddCard'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   boardId: string
@@ -38,10 +40,16 @@ export default function SortableListColumn({ boardId, list, onCardClick, staleTh
   }
 
   const handleDelete = async () => {
-    if (confirm(`Archive list "${list.name}"?`)) {
-      await archiveList.mutateAsync(list.id)
-    }
     setMenuOpen(false)
+    const ok = await confirmDialog({
+      title: `Archive "${list.name}"?`,
+      body: 'Cards in the list stay archived too. Restore from the Archived panel.',
+      confirmLabel: 'Archive list',
+      danger: true,
+    })
+    if (!ok) return
+    await archiveList.mutateAsync(list.id)
+    toast.success('List archived')
   }
 
   const orderedCards = useMemo(() => {

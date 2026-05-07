@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Star, Github } from 'lucide-react'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
@@ -25,6 +25,7 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const register = useAuthStore((s) => s.register)
   const hydrate = useAuthStore((s) => s.hydrateFromTokens)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -127,6 +128,18 @@ export default function LoginPage() {
   }
 
   const ssoEnabled = providers.github
+
+  // Already signed in? Send them on to the app — no point showing the
+  // login form. Skipped while we're in the middle of consuming an SSO
+  // hash (location.hash carries the access token) or when the user
+  // hit /login?pending=1 from an unapproved-account redirect.
+  if (
+    isAuthenticated &&
+    !location.hash.includes('access_token=') &&
+    !pending
+  ) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   if (pending) {
     return (

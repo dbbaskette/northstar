@@ -9,6 +9,8 @@ import {
   useUpdateChecklistItem,
   type Checklist,
 } from '@/api/checklists'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   boardId: string
@@ -157,10 +159,15 @@ function ChecklistView({
           {done}/{total}
         </span>
         <button
-          onClick={() => {
-            if (confirm(`Delete checklist "${checklist.title}"?`)) {
-              deleteChecklist.mutate(checklist.id)
-            }
+          onClick={async () => {
+            const ok = await confirmDialog({
+              title: `Delete "${checklist.title}"?`,
+              confirmLabel: 'Delete checklist',
+              danger: true,
+            })
+            if (!ok) return
+            deleteChecklist.mutate(checklist.id)
+            toast.success('Checklist deleted')
           }}
           className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-red-600"
         >

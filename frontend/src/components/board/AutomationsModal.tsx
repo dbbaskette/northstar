@@ -8,6 +8,8 @@ import {
   type AutomationRule,
 } from '@/api/automations'
 import type { Board } from '@/api/boards'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   open: boolean
@@ -160,10 +162,15 @@ export default function AutomationsModal({ open, board, onClose }: Props) {
                           Edit
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`Delete rule "${r.name}"?`)) {
-                              deleteRule.mutate(r.id)
-                            }
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: `Delete "${r.name}"?`,
+                              confirmLabel: 'Delete rule',
+                              danger: true,
+                            })
+                            if (!ok) return
+                            deleteRule.mutate(r.id)
+                            toast.success('Automation rule deleted')
                           }}
                           className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-700"
                         >

@@ -4,6 +4,8 @@ import type { BoardList } from '@/api/boards'
 import { useArchiveList, useUpdateList } from '@/api/lists'
 import AddCard from '../card/AddCard'
 import CardItem from '../card/CardItem'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   boardId: string
@@ -26,10 +28,15 @@ export default function ListColumn({ boardId, list, onCardClick }: Props) {
   }
 
   const handleDelete = async () => {
-    if (confirm(`Archive list "${list.name}"?`)) {
-      await archiveList.mutateAsync(list.id)
-    }
     setMenuOpen(false)
+    const ok = await confirmDialog({
+      title: `Archive "${list.name}"?`,
+      confirmLabel: 'Archive list',
+      danger: true,
+    })
+    if (!ok) return
+    await archiveList.mutateAsync(list.id)
+    toast.success('List archived')
   }
 
   return (

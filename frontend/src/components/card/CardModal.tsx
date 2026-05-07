@@ -48,6 +48,8 @@ import {
   cardStartDate,
 } from '@/lib/cardHelpers'
 import { useHotkey } from '@/hooks/useHotkeys'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   open: boolean
@@ -200,10 +202,16 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
 
   const handleDelete = async () => {
     if (!card) return
-    if (confirm(`Delete card "${card.title}"?`)) {
-      await deleteCard.mutateAsync(card.id)
-      onClose()
-    }
+    const ok = await confirmDialog({
+      title: `Delete "${card.title}"?`,
+      body: 'The card will be moved to the archive. You can restore it from there.',
+      confirmLabel: 'Delete card',
+      danger: true,
+    })
+    if (!ok) return
+    await deleteCard.mutateAsync(card.id)
+    toast.success('Card deleted')
+    onClose()
   }
 
   const handleCreateAndAttachLabel = async () => {
@@ -318,7 +326,12 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
         </div>
 
         {isLoading ? (
-          <div className="p-6 text-sm text-gray-500">Loading card...</div>
+          <div className="space-y-3 p-6">
+            <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-20 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+            <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-32 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+          </div>
         ) : card ? (
           <div className="space-y-6 p-6">
             {/* Priority + Due date row */}

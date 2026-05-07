@@ -43,7 +43,7 @@ export default function BoardPage() {
   })
 
   if (isLoading) {
-    return <div className="p-6 text-sm text-gray-500">Loading board...</div>
+    return <BoardLoadingSkeleton />
   }
 
   if (error || !board) {
@@ -223,6 +223,43 @@ export default function BoardPage() {
         board={board}
         onClose={() => setShowAutomation(false)}
       />
+    </div>
+  )
+}
+
+function BoardLoadingSkeleton() {
+  return (
+    <div className="flex h-full flex-col bg-gray-100 dark:bg-gray-900">
+      <div className="flex items-center justify-between gap-4 border-b border-black/10 bg-black/5 px-6 py-3 backdrop-blur dark:bg-white/5">
+        <div className="flex items-center gap-3">
+          <div className="h-4 w-4 animate-pulse rounded bg-gray-300/70 dark:bg-gray-700" />
+          <div className="h-5 w-48 animate-pulse rounded bg-gray-300/70 dark:bg-gray-700" />
+        </div>
+        <div className="flex gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-7 w-20 animate-pulse rounded-md bg-gray-300/70 dark:bg-gray-700"
+            />
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-1 gap-4 overflow-hidden p-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex h-fit min-w-72 flex-col gap-2 rounded-lg bg-gray-200/70 p-2 dark:bg-gray-800/70"
+          >
+            <div className="h-5 w-32 animate-pulse rounded bg-gray-300/70 dark:bg-gray-700" />
+            {Array.from({ length: 3 }).map((_, j) => (
+              <div
+                key={j}
+                className="h-16 animate-pulse rounded-lg bg-white shadow-sm dark:bg-gray-700"
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

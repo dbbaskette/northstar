@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { Plug, Trash2 } from 'lucide-react'
 import { useMe } from '@/api/users'
 import { usePlugins, useRegisterPlugin, useUnregisterPlugin } from '@/api/plugins'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 export default function AdminPluginsPage() {
   const { data: me, isLoading: meLoading } = useMe()
@@ -142,10 +144,17 @@ export default function AdminPluginsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    if (confirm(`Unregister "${p.name}"? This disables it on every board.`)) {
-                      unregister.mutate(p.id)
-                    }
+                  onClick={async () => {
+                    const ok = await confirmDialog({
+                      title: `Unregister "${p.name}"?`,
+                      body: 'This disables the plugin on every board.',
+                      confirmLabel: 'Unregister',
+                      danger: true,
+                    })
+                    if (!ok) return
+                    unregister.mutate(p.id, {
+                      onSuccess: () => toast.success('Plugin unregistered'),
+                    })
                   }}
                   className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
                   aria-label={`Unregister ${p.name}`}

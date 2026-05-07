@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './client'
-import type { BoardList } from './boards'
+import type { Board, BoardList } from './boards'
 
 export function useCreateList(boardId: string) {
   const qc = useQueryClient()
@@ -33,7 +33,21 @@ export function useArchiveList(boardId: string) {
     mutationFn: async (listId: string) => {
       await api.delete(`/lists/${listId}`)
     },
-    onSuccess: () => {
+    onMutate: async (listId) => {
+      await qc.cancelQueries({ queryKey: ['board', boardId] })
+      const snapshot = qc.getQueryData<Board>(['board', boardId])
+      if (snapshot) {
+        qc.setQueryData<Board>(['board', boardId], {
+          ...snapshot,
+          lists: (snapshot.lists || []).filter((l) => l.id !== listId),
+        })
+      }
+      return { snapshot }
+    },
+    onError: (_err, _listId, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(['board', boardId], ctx.snapshot)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['board', boardId] })
     },
   })

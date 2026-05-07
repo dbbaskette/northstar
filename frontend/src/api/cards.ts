@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from './client'
-import type { BoardCard } from './boards'
+import type { Board, BoardCard } from './boards'
 import type { Checklist } from './checklists'
 import type { Attachment } from './attachments'
 
@@ -62,7 +62,33 @@ export function useCreateCard(boardId: string) {
       const res = await api.post(`/lists/${input.listId}/cards`, { title: input.title })
       return res.data
     },
-    onSuccess: () => {
+    // Optimistic insert: drop a temp card at the end of the target list so
+    // the user sees their new card the instant they hit Enter. Reconciled
+    // on settle when the server's real id replaces the temp one.
+    onMutate: async ({ listId, title }) => {
+      await qc.cancelQueries({ queryKey: ['board', boardId] })
+      const snapshot = qc.getQueryData<Board>(['board', boardId])
+      if (snapshot) {
+        const temp: BoardCard = {
+          id: `tmp-${Date.now()}`,
+          list_id: listId,
+          title,
+          position: Number.MAX_SAFE_INTEGER,
+          is_archived: false,
+        } as BoardCard
+        qc.setQueryData<Board>(['board', boardId], {
+          ...snapshot,
+          lists: (snapshot.lists || []).map((l) =>
+            l.id === listId ? { ...l, cards: [...(l.cards || []), temp] } : l,
+          ),
+        })
+      }
+      return { snapshot }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(['board', boardId], ctx.snapshot)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['board', boardId] })
     },
   })
@@ -115,7 +141,24 @@ export function useDeleteCard(boardId: string) {
     mutationFn: async (cardId: string) => {
       await api.delete(`/cards/${cardId}`)
     },
-    onSuccess: () => {
+    onMutate: async (cardId) => {
+      await qc.cancelQueries({ queryKey: ['board', boardId] })
+      const snapshot = qc.getQueryData<Board>(['board', boardId])
+      if (snapshot) {
+        qc.setQueryData<Board>(['board', boardId], {
+          ...snapshot,
+          lists: (snapshot.lists || []).map((l) => ({
+            ...l,
+            cards: (l.cards || []).filter((c) => c.id !== cardId),
+          })),
+        })
+      }
+      return { snapshot }
+    },
+    onError: (_err, _cardId, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(['board', boardId], ctx.snapshot)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['board', boardId] })
     },
   })

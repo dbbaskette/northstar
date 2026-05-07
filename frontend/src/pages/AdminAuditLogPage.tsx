@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { Download, RefreshCw } from 'lucide-react'
 import { auditCSVURL, useAuditLog, type AuditFilter } from '@/api/audit'
 import { useMe } from '@/api/users'
+import Skeleton from '@/components/ui/Skeleton'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -130,11 +131,15 @@ export default function AdminAuditLogPage() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
-                  Loading…
-                </td>
-              </tr>
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i}>
+                  {Array.from({ length: 6 }).map((__, j) => (
+                    <td key={j} className="px-3 py-3">
+                      <Skeleton className="h-4 w-full" />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : entries.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-gray-500">

@@ -8,6 +8,8 @@ import {
   type CustomFieldType,
 } from '@/api/customFields'
 import type { CardDetail } from '@/api/cards'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   boardId: string
@@ -165,10 +167,16 @@ export default function CardCustomFields({ boardId, cardId, card }: Props) {
                 </div>
                 {showManage && (
                   <button
-                    onClick={() => {
-                      if (confirm(`Delete custom field "${def.name}"? Values on all cards will be lost.`)) {
-                        deleteDef.mutate(def.id)
-                      }
+                    onClick={async () => {
+                      const ok = await confirmDialog({
+                        title: `Delete "${def.name}"?`,
+                        body: 'Values on every card using this field will be lost.',
+                        confirmLabel: 'Delete field',
+                        danger: true,
+                      })
+                      if (!ok) return
+                      deleteDef.mutate(def.id)
+                      toast.success('Custom field deleted')
                     }}
                     className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-700"
                   >

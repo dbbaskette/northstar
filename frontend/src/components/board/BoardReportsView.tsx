@@ -17,8 +17,37 @@ export default function BoardReportsView({ boardId }: Props) {
 
   if (isLoading || !data) {
     return (
-      <div className="flex h-full items-center justify-center bg-white/95 p-6 text-sm text-gray-600 dark:bg-gray-900/90">
-        Loading reports…
+      <div className="h-full overflow-auto bg-gray-50/95 p-6 dark:bg-gray-900/90">
+        <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="mb-2 h-3 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="h-8 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="mb-3 h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((__, j) => (
+                  <div
+                    key={j}
+                    className="h-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700"
+                    style={{ width: `${100 - j * 14}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }

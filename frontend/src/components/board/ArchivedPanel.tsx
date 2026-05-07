@@ -6,6 +6,8 @@ import {
   useRestoreCard,
   useRestoreList,
 } from '@/api/archive'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   open: boolean
@@ -62,10 +64,16 @@ export default function ArchivedPanel({ open, boardId, onClose }: Props) {
                           Restore
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`Permanently delete list "${l.name}"? This cannot be undone.`)) {
-                              deleteListForever.mutate(l.id)
-                            }
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: `Permanently delete "${l.name}"?`,
+                              body: 'This cannot be undone — every card in the list goes with it.',
+                              confirmLabel: 'Delete forever',
+                              danger: true,
+                            })
+                            if (!ok) return
+                            deleteListForever.mutate(l.id)
+                            toast.success('List permanently deleted')
                           }}
                           className="flex items-center gap-1 rounded-lg bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-200"
                         >
@@ -99,10 +107,16 @@ export default function ArchivedPanel({ open, boardId, onClose }: Props) {
                           Restore
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`Permanently delete card "${c.title}"? This cannot be undone.`)) {
-                              deleteCardForever.mutate(c.id)
-                            }
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: `Permanently delete "${c.title}"?`,
+                              body: 'This cannot be undone.',
+                              confirmLabel: 'Delete forever',
+                              danger: true,
+                            })
+                            if (!ok) return
+                            deleteCardForever.mutate(c.id)
+                            toast.success('Card permanently deleted')
                           }}
                           className="flex items-center gap-1 rounded-lg bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-200"
                         >

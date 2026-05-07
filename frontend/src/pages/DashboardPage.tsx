@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, Star, LayoutGrid } from 'lucide-react'
 import { useTeams } from '@/api/teams'
 import { useTeamBoards } from '@/api/boards'
 import { useAppStore } from '@/stores/appStore'
 import CreateBoardModal from '@/components/board/CreateBoardModal'
 import CreateTeamModal from '@/components/team/CreateTeamModal'
+import EmptyState from '@/components/ui/EmptyState'
+import Skeleton from '@/components/ui/Skeleton'
 
 export default function DashboardPage() {
   const { data: teams = [], isLoading: teamsLoading } = useTeams()
@@ -15,23 +17,36 @@ export default function DashboardPage() {
   const [createTeamOpen, setCreateTeamOpen] = useState(false)
 
   if (teamsLoading) {
-    return <div className="p-6 text-sm text-gray-500">Loading...</div>
+    return (
+      <div className="p-6">
+        <Skeleton className="mb-2 h-7 w-40" />
+        <Skeleton className="mb-6 h-4 w-24" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32" rounded="lg" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (teams.length === 0) {
     return (
       <>
-        <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-          <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome to Northstar</h1>
-          <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">Create a team to get started.</p>
-          <button
-            onClick={() => setCreateTeamOpen(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4" />
-            Create your first team
-          </button>
-        </div>
+        <EmptyState
+          icon={Star}
+          title="Welcome to Northstar"
+          description="Teams group people who collaborate on the same boards. Start by creating yours."
+          action={
+            <button
+              onClick={() => setCreateTeamOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Create your first team
+            </button>
+          }
+        />
         <CreateTeamModal open={createTeamOpen} onClose={() => setCreateTeamOpen(false)} />
       </>
     )
@@ -57,9 +72,31 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {boardsLoading && <div className="text-sm text-gray-500">Loading boards...</div>}
+        {boardsLoading && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-32" rounded="lg" />
+            ))}
+          </div>
+        )}
 
-        {!boardsLoading && (
+        {!boardsLoading && boards.length === 0 ? (
+          <EmptyState
+            icon={LayoutGrid}
+            title="No boards yet"
+            description={`Boards are where ${activeTeam?.name || 'this team'} plans, tracks, and ships work. Create the first one to get rolling.`}
+            action={
+              <button
+                onClick={() => setCreateBoardOpen(true)}
+                disabled={!activeTeamId}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                Create your first board
+              </button>
+            }
+          />
+        ) : !boardsLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {boards.map((board) => (
               <Link
@@ -80,10 +117,10 @@ export default function DashboardPage() {
               className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {boards.length === 0 ? 'Create your first board' : 'New Board'}
+              New Board
             </button>
           </div>
-        )}
+        ) : null}
       </div>
 
       {activeTeamId && (

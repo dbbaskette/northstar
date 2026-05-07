@@ -11,6 +11,9 @@ import {
   type AdminUser,
 } from '@/api/adminUsers'
 import { useMe } from '@/api/users'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
+import Skeleton from '@/components/ui/Skeleton'
 
 const ROLES = ['admin', 'member', 'viewer'] as const
 
@@ -155,11 +158,15 @@ export default function AdminUsersPage() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
-                  Loading…
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  {Array.from({ length: 7 }).map((__, j) => (
+                    <td key={j} className="px-3 py-3">
+                      <Skeleton className="h-4 w-full" />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
@@ -178,22 +185,34 @@ export default function AdminUsersPage() {
                   onActiveChange={(is_active) =>
                     updateUser.mutate({ userId: u.id, is_active })
                   }
-                  onApprove={() => approveUser.mutate(u.id)}
-                  onRevoke={() => {
-                    if (confirm(`Revoke all sessions for ${u.display_name}?`)) {
-                      revokeSessions.mutate(u.id)
-                    }
+                  onApprove={() => {
+                    approveUser.mutate(u.id, {
+                      onSuccess: () => toast.success(`${u.display_name} approved`),
+                    })
                   }}
-                  onDelete={() => {
-                    if (
-                      confirm(
-                        `Permanently delete ${u.display_name} (${u.email})?\n\n` +
-                          `This cannot be undone. Boards and cards they created will stay, ` +
-                          `but their account, comments, and assignments will be removed.`,
-                      )
-                    ) {
-                      deleteUser.mutate(u.id)
-                    }
+                  onRevoke={async () => {
+                    const ok = await confirmDialog({
+                      title: `Revoke sessions for ${u.display_name}?`,
+                      body: 'They will be signed out of every device. They can sign back in if their account is still active.',
+                      confirmLabel: 'Revoke sessions',
+                      danger: true,
+                    })
+                    if (!ok) return
+                    revokeSessions.mutate(u.id, {
+                      onSuccess: () => toast.success('Sessions revoked'),
+                    })
+                  }}
+                  onDelete={async () => {
+                    const ok = await confirmDialog({
+                      title: `Delete ${u.display_name}?`,
+                      body: `${u.email} — this cannot be undone. Boards and cards they created will stay, but their account, comments, and assignments will be removed.`,
+                      confirmLabel: 'Delete user',
+                      danger: true,
+                    })
+                    if (!ok) return
+                    deleteUser.mutate(u.id, {
+                      onSuccess: () => toast.success('User deleted'),
+                    })
                   }}
                 />
               ))

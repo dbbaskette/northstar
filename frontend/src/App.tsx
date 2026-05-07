@@ -10,9 +10,12 @@ import AdminPluginsPage from './pages/AdminPluginsPage'
 import SecurityPage from './pages/SecurityPage'
 import AppShell from './components/layout/AppShell'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import ToastViewport from './components/ui/ToastViewport'
+import ConfirmDialogHost from './components/ui/ConfirmDialog'
 
 export default function App() {
   return (
+    <>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invites/:token" element={<AcceptInvitePage />} />
@@ -29,5 +32,8 @@ export default function App() {
         </Route>
       </Route>
     </Routes>
+    <ToastViewport />
+    <ConfirmDialogHost />
+    </>
   )
 }

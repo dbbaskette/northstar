@@ -27,6 +27,8 @@ import SortableListColumn from './SortableListColumn'
 import CardItem from '../card/CardItem'
 import AddList from '../list/AddList'
 import { applyFilter, type FilterState } from './BoardFilters'
+import { confirmDialog } from '../ui/ConfirmDialog'
+import { toast } from '@/lib/toast'
 
 interface Props {
   board: Board
@@ -61,12 +63,18 @@ export default function BoardView({ board, onCardClick, filter }: Props) {
     const listId = hoveredListRef.current
     if (listId) hotkeysBus.emit('add-card', { listId })
   })
-  useHotkey('c', () => {
+  useHotkey('c', async () => {
     const cardId = hoveredCardRef.current
     if (!cardId) return
-    if (confirm('Archive this card?')) {
-      deleteCard.mutate(cardId)
-    }
+    const ok = await confirmDialog({
+      title: 'Archive this card?',
+      body: 'You can restore it from the Archived panel.',
+      confirmLabel: 'Archive',
+      danger: true,
+    })
+    if (!ok) return
+    deleteCard.mutate(cardId)
+    toast.success('Card archived')
   })
 
   useEffect(() => {
