@@ -5,6 +5,7 @@ import BoardPage from './pages/BoardPage'
 import ProfilePage from './pages/ProfilePage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
 import AdminAuditLogPage from './pages/AdminAuditLogPage'
+import MyWorkPage from './pages/MyWorkPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminPluginsPage from './pages/AdminPluginsPage'
 import SecurityPage from './pages/SecurityPage'
@@ -23,6 +24,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/my-work" element={<MyWorkPage />} />
           <Route path="/boards/:boardId" element={<BoardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/security" element={<SecurityPage />} />

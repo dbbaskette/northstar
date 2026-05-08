@@ -101,6 +101,7 @@ func main() {
 	sessionRepo := repository.NewSessionRepo(pool)
 	twofaRepo := repository.NewTwoFARepo(pool)
 	pluginRepo := repository.NewPluginRepo(pool)
+	workRepo := repository.NewWorkRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -157,6 +158,7 @@ func main() {
 	cardLinkHandler := handler.NewCardLinkHandler(cardLinkRepo)
 	securityHandler := handler.NewSecurityHandler(sessionRepo, twofaRepo, userRepo, cfg.JWTSecret)
 	pluginHandler := handler.NewPluginHandler(pluginRepo, boardRepo)
+	workHandler := handler.NewWorkHandler(workRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -212,6 +214,7 @@ func main() {
 			})
 
 			r.Get("/auth/me", authHandler.Me)
+			r.Get("/me/work", workHandler.Mine)
 
 			r.Route("/me/sessions", func(r chi.Router) {
 				r.Get("/", securityHandler.ListSessions)
@@ -321,6 +324,7 @@ func main() {
 				r.Patch("/move", cardHandler.Move)
 				r.Patch("/reorder", cardHandler.Reorder)
 				r.Patch("/cover", cardHandler.SetCover)
+				r.Patch("/priority", cardHandler.SetPriority)
 				r.Post("/copy", cardHandler.Copy)
 				r.Post("/move-to", cardHandler.MoveToList)
 				r.Post("/vote", voteHandler.Add)

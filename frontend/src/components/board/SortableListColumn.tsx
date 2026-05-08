@@ -159,6 +159,7 @@ export default function SortableListColumn({ boardId, list, onCardClick, staleTh
               onCardClick={onCardClick}
               staleThresholdDays={staleThresholdDays}
               boardId={boardId}
+              list={{ ...list, cards: orderedCards }}
             />
           ))}
         </div>

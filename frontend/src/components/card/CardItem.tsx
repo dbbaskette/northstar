@@ -15,13 +15,22 @@ import {
 
 interface Props {
   card: BoardCard
-  onClick: () => void
+  onClick: (e: React.MouseEvent) => void
   isDragging?: boolean
   staleThresholdDays?: number
   boardId?: string
+  // When true, draws a selected ring around the card. Bulk-mode visual.
+  selected?: boolean
 }
 
-export default function CardItem({ card, onClick, isDragging, staleThresholdDays, boardId }: Props) {
+export default function CardItem({
+  card,
+  onClick,
+  isDragging,
+  staleThresholdDays,
+  boardId,
+  selected,
+}: Props) {
   const voteCard = useVoteCard(boardId || '')
   const viewerCount = useCardViewerCount(card.id)
   const priority = cardPriority(card)
@@ -53,9 +62,21 @@ export default function CardItem({ card, onClick, isDragging, staleThresholdDays
   const handleKeyActivate = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      onClick()
+      // Synthesize a click that carries the keyboard's modifier state
+      // so Shift+Enter / Cmd+Enter on a focused card behave like
+      // their click counterparts (range / multi-select).
+      onClick({
+        shiftKey: e.shiftKey,
+        metaKey: e.metaKey,
+        ctrlKey: e.ctrlKey,
+        altKey: e.altKey,
+      } as unknown as React.MouseEvent)
     }
   }
+
+  const selectedRing = selected
+    ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent'
+    : ''
 
   // Full cover: image fills the whole card thumbnail with title overlaid.
   if (coverImage && coverSize === 'full') {
@@ -68,7 +89,7 @@ export default function CardItem({ card, onClick, isDragging, staleThresholdDays
         aria-label={ariaLabel}
         className={`group cursor-pointer overflow-hidden rounded-lg border-l-4 shadow-sm transition-shadow hover:shadow-md ${
           isDragging ? 'opacity-50' : ''
-        } ${completedAt ? 'opacity-70' : ''}`}
+        } ${completedAt ? 'opacity-70' : ''} ${selectedRing}`}
         style={{
           borderLeftColor: priority ? PRIORITY_COLORS[priority] : 'transparent',
         }}
@@ -95,7 +116,7 @@ export default function CardItem({ card, onClick, isDragging, staleThresholdDays
       aria-label={ariaLabel}
       className={`group cursor-pointer overflow-hidden rounded-lg border-l-4 bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800 ${
         isDragging ? 'opacity-50' : ''
-      } ${completedAt ? 'opacity-70' : ''}`}
+      } ${completedAt ? 'opacity-70' : ''} ${selectedRing}`}
       style={{
         borderLeftColor: priority ? PRIORITY_COLORS[priority] : 'transparent',
       }}

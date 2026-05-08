@@ -313,6 +313,48 @@ func (h *CardHandler) Copy(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{"card_id": newID})
 }
 
+type setPriorityRequest struct {
+	Priority *string `json:"priority"`
+}
+
+// SetPriority is a narrow PATCH that only touches the priority column.
+// The full Update endpoint clobbers title/description if they're not
+// re-sent — bulk operations want to flip one field on many cards
+// without doing N reads first.
+func (h *CardHandler) SetPriority(w http.ResponseWriter, r *http.Request) {
+	cardID := chi.URLParam(r, "cardId")
+	userID := middleware.GetUserID(r.Context())
+
+	var req setPriorityRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	priority := ""
+	if req.Priority != nil {
+		priority = *req.Priority
+	}
+	if priority != "" {
+		switch priority {
+		case "low", "medium", "high", "urgent":
+		default:
+			writeError(w, http.StatusBadRequest, "priority must be one of: low, medium, high, urgent")
+			return
+		}
+	}
+	if err := h.cardRepo.SetPriority(r.Context(), cardID, priority); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if boardID := h.boardIDForCard(r.Context(), cardID); boardID != "" {
+		h.events.Emit(r.Context(), boardID, userID, "card.updated", "card", cardID, map[string]interface{}{
+			"card_id":  cardID,
+			"priority": priority,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
 func (h *CardHandler) MoveToList(w http.ResponseWriter, r *http.Request) {
 	cardID := chi.URLParam(r, "cardId")
 	userID := middleware.GetUserID(r.Context())

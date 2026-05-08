@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, GanttChart, BarChart3, Zap, Settings } from 'lucide-react'
 import { useBoard, useCopyBoard } from '@/api/boards'
 import { hotkeysBus, useHotkey } from '@/hooks/useHotkeys'
@@ -12,7 +12,9 @@ import BoardFilters, { EMPTY_FILTER, type FilterState } from '@/components/board
 import BoardSharingModal from '@/components/board/BoardSharingModal'
 import BoardSettingsModal from '@/components/board/BoardSettingsModal'
 import AutomationsModal from '@/components/board/AutomationsModal'
+import BulkActionBar from '@/components/board/BulkActionBar'
 import WatchToggle from '@/components/ui/WatchToggle'
+import { useSelectionStore } from '@/stores/selectionStore'
 import CardModal from '@/components/card/CardModal'
 import ActivityFeed from '@/components/activity/ActivityFeed'
 import ArchivedPanel from '@/components/board/ArchivedPanel'
@@ -22,6 +24,20 @@ export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
   const { data: board, isLoading, error } = useBoard(boardId || null)
   const [activeCardId, setActiveCardId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Honor ?card=... deep links (from My Work, search, etc.). Strip the
+  // param after consuming it so a refresh doesn't replay it.
+  useEffect(() => {
+    const c = searchParams.get('card')
+    if (c) {
+      setActiveCardId(c)
+      const next = new URLSearchParams(searchParams)
+      next.delete('card')
+      setSearchParams(next, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [showActivity, setShowActivity] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [showShare, setShowShare] = useState(false)
@@ -33,6 +49,16 @@ export default function BoardPage() {
   const copyBoard = useCopyBoard()
 
   useBoardWebSocket(boardId || null)
+
+  // Card selection state is keyed to the active board — clear when
+  // navigating between boards so a previous selection doesn't leak.
+  const setSelectionBoard = useSelectionStore((s) => s.setBoard)
+  const clearSelection = useSelectionStore((s) => s.clear)
+  useEffect(() => {
+    setSelectionBoard(boardId || null)
+    return () => setSelectionBoard(null)
+  }, [boardId, setSelectionBoard])
+  useHotkey('escape', () => clearSelection(), { allowInInputs: false })
 
   useHotkey('f', () => hotkeysBus.emit('toggle-filters'))
   useHotkey('meta+k', (e) => {
@@ -250,6 +276,7 @@ export default function BoardPage() {
         board={board}
         onClose={() => setShowSettings(false)}
       />
+      <BulkActionBar board={board} />
     </div>
   )
 }

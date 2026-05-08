@@ -116,6 +116,26 @@ func (r *CardRepo) Update(ctx context.Context, id string, u CardUpdate) error {
 	return nil
 }
 
+// SetPriority updates only the priority column. Pass empty string to
+// clear. Used by bulk-priority and lets the partial-update path skip
+// reading the rest of the card.
+func (r *CardRepo) SetPriority(ctx context.Context, id, priority string) error {
+	var p pgtype.Text
+	if priority != "" {
+		p = pgtype.Text{String: priority, Valid: true}
+	}
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE cards SET priority = $2 WHERE id = $1 AND deleted_at IS NULL`,
+		id, p)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("card not found")
+	}
+	return nil
+}
+
 func (r *CardRepo) Delete(ctx context.Context, id string) error {
 	ct, err := r.pool.Exec(ctx,
 		`UPDATE cards SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
