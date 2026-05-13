@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Search, UserCheck, Trash2, ClockAlert } from 'lucide-react'
+import { Search, UserCheck, Trash2, ClockAlert, UserPlus } from 'lucide-react'
 import {
   useAdminUsers,
   useApproveUser,
@@ -14,6 +14,7 @@ import { useMe } from '@/api/users'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/lib/toast'
 import Skeleton from '@/components/ui/Skeleton'
+import CreateUserModal from '@/components/admin/CreateUserModal'
 
 const ROLES = ['admin', 'member', 'viewer'] as const
 
@@ -29,6 +30,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkRoleValue, setBulkRoleValue] = useState<string>('member')
+  const [createOpen, setCreateOpen] = useState(false)
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -56,12 +58,21 @@ export default function AdminUsersPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Users</h1>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Approve new accounts, change roles, deactivate or delete users, and revoke
-          active sessions.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Users</h1>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Approve new accounts, change roles, deactivate or delete users, and revoke
+            active sessions.
+          </p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <UserPlus className="h-4 w-4" />
+          Create user
+        </button>
       </div>
 
       {(() => {
@@ -220,6 +231,7 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+      <CreateUserModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   )
 }

@@ -61,6 +61,19 @@ export function useTwoFAVerify() {
   })
 }
 
+export function useChangePassword() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { current_password: string; new_password: string }) => {
+      await api.post('/me/password', input)
+    },
+    onSuccess: () => {
+      // Refresh /users/me so the must_change_password flag clears.
+      qc.invalidateQueries({ queryKey: ['user-me'] })
+    },
+  })
+}
+
 export function useTwoFADisable() {
   const qc = useQueryClient()
   return useMutation({

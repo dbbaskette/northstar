@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pquerna/otp/totp"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/dbbaskette/northstar/internal/middleware"
 	"github.com/dbbaskette/northstar/internal/repository"
@@ -141,6 +142,58 @@ func (h *SecurityHandler) TwoFAVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "enabled"})
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// ChangePassword verifies the current password (or the temp password
+// from an admin invite) and stores a fresh bcrypt hash. Also clears
+// the must_change_password flag and revokes other refresh tokens so
+// a stolen temp password can't ride a long-lived session forward.
+func (h *SecurityHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		writeError(w, http.StatusBadRequest, "new password must be at least 8 characters")
+		return
+	}
+	user, err := h.userRepo.FindByID(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "user not found")
+		return
+	}
+	if user.PasswordHash == "" {
+		writeError(w, http.StatusBadRequest, "this account signs in via SSO — no password to change")
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		writeError(w, http.StatusUnauthorized, "current password is incorrect")
+		return
+	}
+	if req.CurrentPassword == req.NewPassword {
+		writeError(w, http.StatusBadRequest, "new password must be different from the current one")
+		return
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := h.userRepo.SetPassword(r.Context(), userID, string(hash)); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Wipe refresh tokens so any other device that has the temp
+	// password can't extend its session indefinitely.
+	_ = h.userRepo.RevokeRefreshTokens(r.Context(), userID)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *SecurityHandler) TwoFADisable(w http.ResponseWriter, r *http.Request) {

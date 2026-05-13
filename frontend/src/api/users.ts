@@ -10,6 +10,7 @@ export interface UserProfile {
   bio?: { String: string; Valid: boolean } | string | null
   timezone?: { String: string; Valid: boolean } | string | null
   role: string
+  must_change_password?: boolean
 }
 
 export function useMe() {

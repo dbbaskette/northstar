@@ -32,13 +32,13 @@ func (r *UserRepo) Create(ctx context.Context, u *models.User) error {
 
 func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*models.User, error) {
 	const q = `
-		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, created_at, updated_at
+		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, must_change_password, created_at, updated_at
 		FROM users WHERE email = $1`
 
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, q, email).Scan(
 		&u.ID, &u.Email, &u.Username, &u.PasswordHash,
-		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.MustChangePassword, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -50,13 +50,13 @@ func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*models.User,
 // (provider, external user ID) tuple, or pgx.ErrNoRows.
 func (r *UserRepo) FindByExternalID(ctx context.Context, provider, externalID string) (*models.User, error) {
 	const q = `
-		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, created_at, updated_at
+		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, must_change_password, created_at, updated_at
 		FROM users WHERE external_provider = $1 AND external_id = $2`
 
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, q, provider, externalID).Scan(
 		&u.ID, &u.Email, &u.Username, &u.PasswordHash,
-		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.MustChangePassword, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -89,13 +89,13 @@ func (r *UserRepo) CreateExternalUser(ctx context.Context, u *models.User, provi
 
 func (r *UserRepo) FindByID(ctx context.Context, id string) (*models.User, error) {
 	const q = `
-		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, created_at, updated_at
+		SELECT id, email, username, password_hash, display_name, avatar_url, bio, timezone, role, must_change_password, created_at, updated_at
 		FROM users WHERE id = $1`
 
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&u.ID, &u.Email, &u.Username, &u.PasswordHash,
-		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+		&u.DisplayName, &u.AvatarURL, &u.Bio, &u.Timezone, &u.Role, &u.MustChangePassword, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -179,6 +179,48 @@ func (r *UserRepo) AdminList(ctx context.Context) ([]AdminUser, error) {
 		out = append(out, u)
 	}
 	return out, rows.Err()
+}
+
+// CreateAdminInvited creates a user with a temporary password and
+// the must_change_password flag set. Skips the public approval
+// queue — admin-created accounts are pre-approved.
+func (r *UserRepo) CreateAdminInvited(ctx context.Context, u *models.User) error {
+	const q = `
+		INSERT INTO users (email, username, password_hash, display_name, role,
+		                   approved_at, must_change_password)
+		VALUES ($1, $2, $3, $4, $5, NOW(), TRUE)
+		RETURNING id, created_at, updated_at`
+	return r.pool.QueryRow(ctx, q,
+		u.Email, u.Username, u.PasswordHash, u.DisplayName, u.Role,
+	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
+}
+
+// SetPassword replaces the password hash AND clears the
+// must_change_password flag. Used by /me/password.
+func (r *UserRepo) SetPassword(ctx context.Context, userID, hash string) error {
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE users SET password_hash = $2, must_change_password = FALSE WHERE id = $1`,
+		userID, hash,
+	)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// MustChangePassword reports the flag for the given user.
+func (r *UserRepo) MustChangePassword(ctx context.Context, userID string) (bool, error) {
+	var v bool
+	err := r.pool.QueryRow(ctx,
+		`SELECT must_change_password FROM users WHERE id = $1`, userID,
+	).Scan(&v)
+	if err == pgx.ErrNoRows {
+		return false, fmt.Errorf("user not found")
+	}
+	return v, err
 }
 
 // CountUsers returns how many users exist — used by Register to

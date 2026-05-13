@@ -58,6 +58,30 @@ export function useApproveUser() {
   })
 }
 
+// AdminCreatedUser is what POST /admin/users returns — includes the
+// one-time-visible temp password the admin has to relay out-of-band.
+export interface AdminCreatedUser {
+  user: AdminUser
+  temp_password: string
+  warning: string
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      email: string
+      username: string
+      display_name: string
+      role: 'admin' | 'member' | 'viewer'
+    }): Promise<AdminCreatedUser> => {
+      const res = await api.post('/admin/users', input)
+      return res.data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  })
+}
+
 export function useDeleteUser() {
   const qc = useQueryClient()
   return useMutation({

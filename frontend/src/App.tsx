@@ -6,6 +6,7 @@ import ProfilePage from './pages/ProfilePage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
 import AdminAuditLogPage from './pages/AdminAuditLogPage'
 import MyWorkPage from './pages/MyWorkPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminPluginsPage from './pages/AdminPluginsPage'
 import SecurityPage from './pages/SecurityPage'
@@ -22,6 +23,11 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invites/:token" element={<AcceptInvitePage />} />
       <Route element={<ProtectedRoute />}>
+        {/* Forced password-change screen renders outside the AppShell
+            so a user with must_change_password has no sidebar to use
+            as an escape hatch. ProtectedRoute redirects every other
+            route here while the flag is set. */}
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />

@@ -203,6 +203,7 @@ func main() {
 				r.Get("/admin/audit-log", auditHandler.List)
 				r.Get("/admin/audit-log.csv", auditHandler.ExportCSV)
 				r.Get("/admin/users", adminUserHandler.List)
+				r.Post("/admin/users", adminUserHandler.Create)
 				r.Patch("/admin/users/{userId}", adminUserHandler.Update)
 				r.Delete("/admin/users/{userId}", adminUserHandler.Delete)
 				r.Post("/admin/users/{userId}/approve", adminUserHandler.Approve)
@@ -222,6 +223,7 @@ func main() {
 				r.Get("/", securityHandler.ListSessions)
 				r.Post("/{sessionId}/revoke", securityHandler.RevokeSession)
 			})
+			r.Post("/me/password", securityHandler.ChangePassword)
 			r.Route("/me/2fa", func(r chi.Router) {
 				r.Get("/", securityHandler.TwoFAStatus)
 				r.Post("/setup", securityHandler.TwoFASetup)

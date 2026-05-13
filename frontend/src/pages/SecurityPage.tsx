@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ShieldCheck, Smartphone, Monitor, RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ShieldCheck, Smartphone, Monitor, RefreshCw, KeyRound } from 'lucide-react'
 import {
   useRevokeSession,
   useSessions,
@@ -58,6 +59,25 @@ export default function SecurityPage() {
           Manage your active sessions and two-factor authentication.
         </p>
       </div>
+
+      {/* Password */}
+      <section className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <KeyRound className="h-4 w-4" />
+          Password
+        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Pick a new password. Doing this signs other sessions out.
+          </p>
+          <Link
+            to="/change-password"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            Change password
+          </Link>
+        </div>
+      </section>
 
       {/* 2FA */}
       <section className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
