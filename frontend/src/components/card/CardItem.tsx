@@ -16,6 +16,7 @@ import {
 interface Props {
   card: BoardCard
   onClick: (e: React.MouseEvent) => void
+  onContextMenu?: (e: React.MouseEvent) => void
   isDragging?: boolean
   staleThresholdDays?: number
   boardId?: string
@@ -26,6 +27,7 @@ interface Props {
 export default function CardItem({
   card,
   onClick,
+  onContextMenu,
   isDragging,
   staleThresholdDays,
   boardId,
@@ -83,6 +85,7 @@ export default function CardItem({
     return (
       <div
         onClick={onClick}
+        onContextMenu={onContextMenu}
         onKeyDown={handleKeyActivate}
         role="button"
         tabIndex={0}
@@ -110,6 +113,7 @@ export default function CardItem({
   return (
     <div
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onKeyDown={handleKeyActivate}
       role="button"
       tabIndex={0}

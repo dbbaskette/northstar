@@ -13,6 +13,7 @@ import AppShell from './components/layout/AppShell'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import ToastViewport from './components/ui/ToastViewport'
 import ConfirmDialogHost from './components/ui/ConfirmDialog'
+import CommandPalette from './components/ui/CommandPalette'
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
     </Routes>
     <ToastViewport />
     <ConfirmDialogHost />
+    <CommandPalette />
     </>
   )
 }

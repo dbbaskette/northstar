@@ -230,6 +230,51 @@ func (r *BoardRepo) Update(ctx context.Context, id string, name, description, ba
 	return nil
 }
 
+// ListAccessibleForUser returns every board the user can see: their
+// team-visibility boards (via team_members) UNIONed with private
+// boards where they're explicitly in board_members. One row per
+// board, with team_name joined in so the command palette can render
+// "Marketing → Q4 launch" without follow-ups.
+type AccessibleBoard struct {
+	ID         string `json:"id"`
+	TeamID     string `json:"team_id"`
+	TeamName   string `json:"team_name"`
+	Name       string `json:"name"`
+	Background string `json:"background"`
+	Visibility string `json:"visibility"`
+}
+
+func (r *BoardRepo) ListAccessibleForUser(ctx context.Context, userID string) ([]AccessibleBoard, error) {
+	const q = `
+		SELECT DISTINCT b.id::text, b.team_id::text, t.name AS team_name,
+		       b.name, COALESCE(b.background, '') AS background, b.visibility::text
+		FROM boards b
+		JOIN teams t ON t.id = b.team_id
+		LEFT JOIN team_members tm ON tm.team_id = b.team_id AND tm.user_id = $1::uuid
+		LEFT JOIN board_members bm ON bm.board_id = b.id AND bm.user_id = $1::uuid
+		WHERE b.deleted_at IS NULL
+		  AND b.is_archived = FALSE
+		  AND (
+		    (b.visibility = 'team' AND tm.user_id IS NOT NULL)
+		    OR bm.user_id IS NOT NULL
+		  )
+		ORDER BY b.name`
+	rows, err := r.pool.Query(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []AccessibleBoard{}
+	for rows.Next() {
+		var b AccessibleBoard
+		if err := rows.Scan(&b.ID, &b.TeamID, &b.TeamName, &b.Name, &b.Background, &b.Visibility); err != nil {
+			return nil, err
+		}
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
+
 func (r *BoardRepo) UpdateBackground(ctx context.Context, id, background string) error {
 	ct, err := r.pool.Exec(ctx,
 		`UPDATE boards SET background = $2 WHERE id = $1 AND deleted_at IS NULL`,

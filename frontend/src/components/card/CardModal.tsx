@@ -28,6 +28,7 @@ import { useCreateLabel } from '@/api/labels'
 import { useMe } from '@/api/users'
 import CardChecklists from './CardChecklists'
 import CardAttachments from './CardAttachments'
+import SmartDatePicker from '../ui/SmartDatePicker'
 import CardLinks from './CardLinks'
 import CardCoverPicker from './CardCoverPicker'
 import CardCopyMoveModal from './CardCopyMoveModal'
@@ -120,8 +121,8 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
   const dueDate = card ? cardDueDate(card) : null
   const startDate = card ? cardStartDate(card) : null
   const completedAt = card ? cardCompletedAt(card) : null
-  const dueDateInputValue = dueDate ? dueDate.toISOString().split('T')[0] : ''
-  const startDateInputValue = startDate ? startDate.toISOString().split('T')[0] : ''
+  const dueDateInputValue = dueDate ? (dueDate.toISOString().split('T')[0] ?? '') : ''
+  const startDateInputValue = startDate ? (startDate.toISOString().split('T')[0] ?? '') : ''
 
   const buildUpdate = (overrides: Partial<{
     title: string
@@ -380,40 +381,21 @@ export default function CardModal({ open, cardId, board, onClose }: Props) {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="w-12 text-xs text-gray-500">Start</span>
-                    <input
-                      type="date"
+                    <SmartDatePicker
                       value={startDateInputValue}
-                      onChange={(e) => handleSetStartDate(e.target.value)}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      onChange={(v) => handleSetStartDate(v)}
+                      placeholder="Start date"
+                      ariaLabel="Start date"
                     />
-                    {startDateInputValue && (
-                      <button
-                        onClick={() => handleSetStartDate('')}
-                        className="rounded p-1 text-gray-400 hover:bg-gray-100"
-                        aria-label="Clear start date"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-12 text-xs text-gray-500">Due</span>
-                    <input
-                      ref={dueDateInputRef}
-                      type="date"
+                    <SmartDatePicker
                       value={dueDateInputValue}
-                      onChange={(e) => handleSetDueDate(e.target.value)}
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      onChange={(v) => handleSetDueDate(v)}
+                      placeholder="Due date"
+                      ariaLabel="Due date"
                     />
-                    {dueDateInputValue && (
-                      <button
-                        onClick={() => handleSetDueDate('')}
-                        className="rounded p-1 text-gray-400 hover:bg-gray-100"
-                        aria-label="Clear due date"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>

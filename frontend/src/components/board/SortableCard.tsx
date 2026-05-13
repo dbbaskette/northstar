@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { BoardCard, BoardList } from '@/api/boards'
+import type { Board, BoardCard, BoardList } from '@/api/boards'
 import CardItem from '../card/CardItem'
+import CardContextMenu from './CardContextMenu'
 import { useSelectionStore } from '@/stores/selectionStore'
 
 interface Props {
@@ -12,6 +14,9 @@ interface Props {
   // Pass the parent list's card list so shift+click can compute a
   // contiguous range from the anchor.
   list?: BoardList
+  // Full board reference so the context menu can show "move to list"
+  // and "add label" submenus.
+  board?: Board
 }
 
 export default function SortableCard({
@@ -20,12 +25,20 @@ export default function SortableCard({
   staleThresholdDays,
   boardId,
   list,
+  board,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, data: { type: 'card', listId: card.list_id } })
 
   const selected = useSelectionStore((s) => s.selected.has(card.id))
   const selectionSize = useSelectionStore((s) => s.selected.size)
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (!board) return
+    e.preventDefault()
+    setMenuPos({ x: e.clientX, y: e.clientY })
+  }
 
   const handleClick = (e: React.MouseEvent) => {
     const meta = e.metaKey || e.ctrlKey
@@ -95,10 +108,20 @@ export default function SortableCard({
       <CardItem
         card={card}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         staleThresholdDays={staleThresholdDays}
         boardId={boardId}
         selected={selected}
       />
+      {menuPos && board && (
+        <CardContextMenu
+          card={card}
+          board={board}
+          pos={menuPos}
+          onOpenCard={() => onCardClick(card.id)}
+          onClose={() => setMenuPos(null)}
+        />
+      )}
     </div>
   )
 }

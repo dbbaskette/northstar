@@ -159,6 +159,7 @@ func main() {
 	securityHandler := handler.NewSecurityHandler(sessionRepo, twofaRepo, userRepo, cfg.JWTSecret)
 	pluginHandler := handler.NewPluginHandler(pluginRepo, boardRepo)
 	workHandler := handler.NewWorkHandler(workRepo)
+	meBoardsHandler := handler.NewMeBoardsHandler(boardRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -215,6 +216,7 @@ func main() {
 
 			r.Get("/auth/me", authHandler.Me)
 			r.Get("/me/work", workHandler.Mine)
+			r.Get("/me/boards", meBoardsHandler.List)
 
 			r.Route("/me/sessions", func(r chi.Router) {
 				r.Get("/", securityHandler.ListSessions)

@@ -82,6 +82,26 @@ export function useBoard(boardId: string | null) {
   })
 }
 
+export interface AccessibleBoard {
+  id: string
+  team_id: string
+  team_name: string
+  name: string
+  background: string
+  visibility: 'team' | 'private'
+}
+
+export function useMyBoards() {
+  return useQuery({
+    queryKey: ['me', 'boards'],
+    queryFn: async (): Promise<AccessibleBoard[]> => {
+      const res = await api.get('/me/boards')
+      return res.data.boards || []
+    },
+    staleTime: 30_000,
+  })
+}
+
 export function useUpdateBoard(boardId: string) {
   const qc = useQueryClient()
   return useMutation({

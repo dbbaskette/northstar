@@ -13,6 +13,7 @@ import {
 import { useMyWork, type WorkItem, type WorkReason } from '@/api/work'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import CardHoverPreview, { useHoverPreview } from '@/components/ui/CardHoverPreview'
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: '#DC2626',
@@ -81,6 +82,7 @@ const REASON_FILTERS: { id: 'all' | WorkReason; label: string; icon: React.React
 export default function MyWorkPage() {
   const { data: items = [], isLoading } = useMyWork()
   const [filter, setFilter] = useState<'all' | WorkReason>('all')
+  const preview = useHoverPreview()
 
   const filtered = useMemo(
     () =>
@@ -172,16 +174,31 @@ export default function MyWorkPage() {
           {(['overdue', 'today', 'week', 'later', 'no_date', 'completed'] as Bucket[]).map(
             (b) =>
               grouped[b].length > 0 && (
-                <BucketSection key={b} bucket={b} items={grouped[b]} />
+                <BucketSection key={b} bucket={b} items={grouped[b]} hoverProps={preview} />
               ),
           )}
         </div>
       )}
+      <CardHoverPreview
+        cardId={preview.state?.cardId || null}
+        anchor={preview.state?.anchor || null}
+        onClose={preview.close}
+      />
     </div>
   )
 }
 
-function BucketSection({ bucket, items }: { bucket: Bucket; items: WorkItem[] }) {
+type HoverProps = ReturnType<typeof useHoverPreview>
+
+function BucketSection({
+  bucket,
+  items,
+  hoverProps,
+}: {
+  bucket: Bucket
+  items: WorkItem[]
+  hoverProps: HoverProps
+}) {
   const meta = BUCKET_LABEL[bucket]
   return (
     <section className={`overflow-hidden rounded-lg border ${meta.tint}`}>
@@ -196,20 +213,22 @@ function BucketSection({ bucket, items }: { bucket: Bucket; items: WorkItem[] })
       </header>
       <ul className="divide-y divide-gray-100 dark:divide-gray-700">
         {items.map((it) => (
-          <WorkRow key={it.card_id} item={it} />
+          <WorkRow key={it.card_id} item={it} hoverProps={hoverProps} />
         ))}
       </ul>
     </section>
   )
 }
 
-function WorkRow({ item }: { item: WorkItem }) {
+function WorkRow({ item, hoverProps }: { item: WorkItem; hoverProps: HoverProps }) {
   const due = item.due_date ? new Date(item.due_date) : null
   const overdue = !!(due && !item.completed_at && due < new Date())
   return (
     <li>
       <Link
         to={`/boards/${item.board_id}?card=${item.card_id}`}
+        onMouseEnter={(e) => hoverProps.show(item.card_id, e.currentTarget)}
+        onMouseLeave={() => hoverProps.cancel()}
         className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40"
       >
         {item.priority ? (

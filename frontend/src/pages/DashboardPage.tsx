@@ -4,6 +4,7 @@ import { Plus, Star, LayoutGrid } from 'lucide-react'
 import { useTeams } from '@/api/teams'
 import { useTeamBoards } from '@/api/boards'
 import { useAppStore } from '@/stores/appStore'
+import { useBoardPrefs } from '@/lib/boardPrefs'
 import CreateBoardModal from '@/components/board/CreateBoardModal'
 import CreateTeamModal from '@/components/team/CreateTeamModal'
 import EmptyState from '@/components/ui/EmptyState'
@@ -111,23 +112,7 @@ export default function DashboardPage() {
                   }
                 : { backgroundColor: board.background }
               return (
-                <Link
-                  key={board.id}
-                  to={`/boards/${board.id}`}
-                  className="group relative flex h-32 flex-col justify-between overflow-hidden rounded-lg p-4 text-white shadow-sm transition hover:shadow-md"
-                  style={tileStyle}
-                >
-                  {isImg && (
-                    <span
-                      className="absolute inset-0 bg-gradient-to-br from-black/0 via-black/0 to-black/40"
-                      aria-hidden
-                    />
-                  )}
-                  <span className="relative font-semibold drop-shadow">{board.name}</span>
-                  <span className="relative text-xs opacity-90 drop-shadow">
-                    Created {new Date(board.created_at).toLocaleDateString()}
-                  </span>
-                </Link>
+                <BoardTile key={board.id} board={board} isImg={isImg} tileStyle={tileStyle} />
               )
             })}
 
@@ -150,5 +135,54 @@ export default function DashboardPage() {
         />
       )}
     </>
+  )
+}
+
+function BoardTile({
+  board,
+  isImg,
+  tileStyle,
+}: {
+  board: { id: string; name: string; created_at: string }
+  isImg: boolean
+  tileStyle: React.CSSProperties
+}) {
+  const isFav = useBoardPrefs((s) => s.favorites.has(board.id))
+  const toggleFav = useBoardPrefs((s) => s.toggleFavorite)
+  return (
+    <div className="group relative">
+      <Link
+        to={`/boards/${board.id}`}
+        className="relative flex h-32 flex-col justify-between overflow-hidden rounded-lg p-4 text-white shadow-sm transition hover:shadow-md"
+        style={tileStyle}
+      >
+        {isImg && (
+          <span
+            className="absolute inset-0 bg-gradient-to-br from-black/0 via-black/0 to-black/40"
+            aria-hidden
+          />
+        )}
+        <span className="relative font-semibold drop-shadow">{board.name}</span>
+        <span className="relative text-xs opacity-90 drop-shadow">
+          Created {new Date(board.created_at).toLocaleDateString()}
+        </span>
+      </Link>
+      <button
+        onClick={(e) => {
+          e.preventDefault()
+          toggleFav(board.id)
+        }}
+        aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+        aria-pressed={isFav}
+        title={isFav ? 'Unfavorite' : 'Favorite'}
+        className={`absolute right-2 top-2 rounded-full p-1.5 transition ${
+          isFav
+            ? 'bg-black/30 text-amber-300 opacity-100'
+            : 'bg-black/0 text-white/80 opacity-0 group-hover:bg-black/30 group-hover:opacity-100'
+        }`}
+      >
+        <Star className={`h-4 w-4 ${isFav ? 'fill-amber-400 stroke-amber-400' : ''}`} />
+      </button>
+    </div>
   )
 }

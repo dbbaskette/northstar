@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, GanttChart, BarChart3, Zap, Settings } from 'lucide-react'
+import { ChevronLeft, Archive, Share2, Lock, Copy, Calendar, LayoutGrid, GanttChart, BarChart3, Zap, Settings, Star } from 'lucide-react'
 import { useBoard, useCopyBoard } from '@/api/boards'
 import { hotkeysBus, useHotkey } from '@/hooks/useHotkeys'
 import BoardView from '@/components/board/BoardView'
@@ -19,6 +19,7 @@ import CardModal from '@/components/card/CardModal'
 import ActivityFeed from '@/components/activity/ActivityFeed'
 import ArchivedPanel from '@/components/board/ArchivedPanel'
 import { useBoardWebSocket } from '@/hooks/useWebSocket'
+import { useBoardPrefs } from '@/lib/boardPrefs'
 
 export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
@@ -60,15 +61,13 @@ export default function BoardPage() {
   }, [boardId, setSelectionBoard])
   useHotkey('escape', () => clearSelection(), { allowInInputs: false })
 
+  // Record visits for the sidebar Recents + command palette.
+  const recordVisit = useBoardPrefs((s) => s.recordVisit)
+  useEffect(() => {
+    if (board?.id && board.name) recordVisit({ id: board.id, name: board.name })
+  }, [board?.id, board?.name, recordVisit])
+
   useHotkey('f', () => hotkeysBus.emit('toggle-filters'))
-  useHotkey('meta+k', (e) => {
-    e.preventDefault()
-    hotkeysBus.emit('focus-search')
-  })
-  useHotkey('ctrl+k', (e) => {
-    e.preventDefault()
-    hotkeysBus.emit('focus-search')
-  })
 
   if (isLoading) {
     return <BoardLoadingSkeleton />
@@ -116,6 +115,7 @@ export default function BoardPage() {
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <h2 className="text-lg font-semibold">{board.name}</h2>
+          <FavoriteToggle boardId={board.id} />
           {board.visibility === 'private' && (
             <span
               className="inline-flex items-center gap-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider"
@@ -278,6 +278,26 @@ export default function BoardPage() {
       />
       <BulkActionBar board={board} />
     </div>
+  )
+}
+
+function FavoriteToggle({ boardId }: { boardId: string }) {
+  const isFav = useBoardPrefs((s) => s.favorites.has(boardId))
+  const toggle = useBoardPrefs((s) => s.toggleFavorite)
+  return (
+    <button
+      onClick={() => toggle(boardId)}
+      aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+      aria-pressed={isFav}
+      title={isFav ? 'Unfavorite' : 'Favorite'}
+      className="rounded p-1 text-white/70 hover:bg-white/20 hover:text-white"
+    >
+      <Star
+        className={`h-4 w-4 ${
+          isFav ? 'fill-amber-400 stroke-amber-400 text-amber-400' : ''
+        }`}
+      />
+    </button>
   )
 }
 

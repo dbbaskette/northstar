@@ -18,9 +18,10 @@ interface Props {
   list: BoardList
   onCardClick: (cardId: string) => void
   staleThresholdDays?: number
+  board?: import('@/api/boards').Board
 }
 
-export default function SortableListColumn({ boardId, list, onCardClick, staleThresholdDays }: Props) {
+export default function SortableListColumn({ boardId, list, onCardClick, staleThresholdDays, board }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: list.id, data: { type: 'list' } })
 
@@ -160,6 +161,7 @@ export default function SortableListColumn({ boardId, list, onCardClick, staleTh
               staleThresholdDays={staleThresholdDays}
               boardId={boardId}
               list={{ ...list, cards: orderedCards }}
+              board={board}
             />
           ))}
         </div>

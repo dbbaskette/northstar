@@ -4,9 +4,9 @@ import { LogOut, Search, Menu, User as UserIcon, ShieldCheck } from 'lucide-reac
 import { useAuthStore } from '@/stores/authStore'
 import { useMe } from '@/api/users'
 import Avatar from '../ui/Avatar'
-import SearchModal from '../search/SearchModal'
 import ThemeToggle from './ThemeToggle'
 import NotificationsBell from './NotificationsBell'
+import { useCommandPalette } from '../ui/CommandPalette'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -17,7 +17,7 @@ export default function Header({ onMenuClick }: HeaderProps = {}) {
   const logout = useAuthStore((s) => s.logout)
   const { data: me } = useMe()
   const navigate = useNavigate()
-  const [searchOpen, setSearchOpen] = useState(false)
+  const openPalette = useCommandPalette((s) => s.setOpen)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -38,16 +38,8 @@ export default function Header({ onMenuClick }: HeaderProps = {}) {
         }
       : null
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(true)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
+  // Cmd-K is owned by CommandPalette globally — Header just exposes
+  // a click target.
 
   // Close the user menu on outside-click. Pointerdown not click so we
   // close before the click bubbles to a Link inside the menu.
@@ -83,11 +75,12 @@ export default function Header({ onMenuClick }: HeaderProps = {}) {
             </button>
           )}
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={() => openPalette(true)}
+            aria-label="Open command palette"
             className="flex flex-1 max-w-xs items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-500 hover:border-gray-300 hover:bg-white sm:flex-none sm:w-72 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-600"
           >
             <Search className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-            <span className="flex-1 truncate text-left">Search cards…</span>
+            <span className="flex-1 truncate text-left">Jump to a board, search cards…</span>
             <kbd className="hidden rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-500 sm:inline dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400">
               ⌘K
             </kbd>
@@ -158,7 +151,6 @@ export default function Header({ onMenuClick }: HeaderProps = {}) {
           )}
         </div>
       </header>
-      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   )
 }
