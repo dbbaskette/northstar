@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from './client'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface UserProfile {
   id: string
@@ -14,22 +15,26 @@ export interface UserProfile {
 }
 
 export function useMe() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return useQuery({
     queryKey: ['user-me'],
     queryFn: async (): Promise<UserProfile> => {
       const res = await api.get('/users/me')
       return res.data
     },
+    enabled: isAuthenticated,
   })
 }
 
 export function useUsers() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return useQuery({
     queryKey: ['users'],
     queryFn: async (): Promise<UserProfile[]> => {
       const res = await api.get('/users')
       return res.data || []
     },
+    enabled: isAuthenticated,
   })
 }
 

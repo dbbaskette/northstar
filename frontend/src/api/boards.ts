@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from './client'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface Board {
   id: string
@@ -92,6 +93,7 @@ export interface AccessibleBoard {
 }
 
 export function useMyBoards() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return useQuery({
     queryKey: ['me', 'boards'],
     queryFn: async (): Promise<AccessibleBoard[]> => {
@@ -99,6 +101,7 @@ export function useMyBoards() {
       return res.data.boards || []
     },
     staleTime: 30_000,
+    enabled: isAuthenticated,
   })
 }
 

@@ -27,7 +27,13 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         useAuthStore.getState().logout()
-        window.location.href = '/login'
+        // Don't hard-redirect if we're already on /login — otherwise
+        // any background query (CommandPalette, useMe, etc.) that 401s
+        // while sitting on the login page reloads the page in a tight
+        // loop. The router renders the login form already.
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
       }
     }
     return Promise.reject(error)
