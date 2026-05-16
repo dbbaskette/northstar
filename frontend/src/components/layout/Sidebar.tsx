@@ -13,6 +13,7 @@ import {
   Inbox,
   Clock,
   Search,
+  Database,
 } from 'lucide-react'
 import { useTeams } from '@/api/teams'
 import { useMyBoards } from '@/api/boards'
@@ -142,6 +143,14 @@ export default function Sidebar({ onNavigate }: SidebarProps = {}) {
               >
                 <Plug className="h-4 w-4" />
                 Plugins
+              </Link>
+              <Link
+                to="/admin/database"
+                onClick={onNavigate}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <Database className="h-4 w-4" />
+                Database
               </Link>
             </>
           )}

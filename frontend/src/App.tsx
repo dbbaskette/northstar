@@ -9,6 +9,7 @@ import MyWorkPage from './pages/MyWorkPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminPluginsPage from './pages/AdminPluginsPage'
+import AdminDBInfoPage from './pages/AdminDBInfoPage'
 import SecurityPage from './pages/SecurityPage'
 import AppShell from './components/layout/AppShell'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/admin/audit-log" element={<AdminAuditLogPage />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/plugins" element={<AdminPluginsPage />} />
+          <Route path="/admin/database" element={<AdminDBInfoPage />} />
         </Route>
       </Route>
     </Routes>

@@ -102,6 +102,7 @@ func main() {
 	twofaRepo := repository.NewTwoFARepo(pool)
 	pluginRepo := repository.NewPluginRepo(pool)
 	workRepo := repository.NewWorkRepo(pool)
+	dbInfoRepo := repository.NewDBInfoRepo(pool)
 
 	store, err := storage.NewFS(cfg.StoragePath)
 	if err != nil {
@@ -160,6 +161,7 @@ func main() {
 	pluginHandler := handler.NewPluginHandler(pluginRepo, boardRepo)
 	workHandler := handler.NewWorkHandler(workRepo)
 	meBoardsHandler := handler.NewMeBoardsHandler(boardRepo)
+	dbInfoHandler := handler.NewDBInfoHandler(dbInfoRepo)
 
 	reminderWorker := service.NewReminderWorker(reminderRepo, events, 60*time.Second)
 	go reminderWorker.Run(context.Background())
@@ -201,6 +203,7 @@ func main() {
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireAdmin(userRepo))
 				r.Get("/admin/audit-log", auditHandler.List)
+				r.Get("/admin/db-info", dbInfoHandler.Get)
 				r.Get("/admin/audit-log.csv", auditHandler.ExportCSV)
 				r.Get("/admin/users", adminUserHandler.List)
 				r.Post("/admin/users", adminUserHandler.Create)
