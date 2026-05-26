@@ -4,6 +4,7 @@ import { Download, RefreshCw } from 'lucide-react'
 import { auditCSVURL, useAuditLog, type AuditFilter } from '@/api/audit'
 import { useMe } from '@/api/users'
 import Skeleton from '@/components/ui/Skeleton'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -16,6 +17,7 @@ function isoFromInput(v: string, end: boolean): string | undefined {
 }
 
 export default function AdminAuditLogPage() {
+  useDocumentTitle('Audit log')
   const { data: me, isLoading: meLoading } = useMe()
   const [actor, setActor] = useState('')
   const [action, setAction] = useState('')

@@ -14,6 +14,7 @@ type Events struct {
 	activityRepo *repository.ActivityRepo
 	notifRepo    *repository.NotificationRepo
 	watcherRepo  *repository.WatcherRepo
+	userRepo     *repository.UserRepo
 	hub          *ws.Hub
 	dispatcher   *WebhookDispatcher
 	automation   *AutomationEngine
@@ -34,6 +35,15 @@ func NewEvents(
 		hub:          hub,
 		dispatcher:   dispatcher,
 		automation:   automation,
+	}
+}
+
+// SetUserRepo wires the user repo so Notify can consult per-user
+// notification preferences. Optional — kept out of the constructor to
+// avoid breaking callers that don't care.
+func (e *Events) SetUserRepo(u *repository.UserRepo) {
+	if e != nil {
+		e.userRepo = u
 	}
 }
 
@@ -83,6 +93,12 @@ func (e *Events) Notify(
 	}
 	for _, uid := range recipientUserIDs {
 		if uid == "" || uid == actorUserID {
+			continue
+		}
+		// Per-user opt-out: skip if the user has disabled this type.
+		// Default is allow, so users without prefs still receive
+		// everything.
+		if e.userRepo != nil && !e.userRepo.WantsNotification(ctx, uid, notifType) {
 			continue
 		}
 		if err := e.notifRepo.Create(ctx, uid, notifType, payload, sourceCardID, sourceBoardID); err != nil {

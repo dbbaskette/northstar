@@ -5,8 +5,10 @@ import { useMe } from '@/api/users'
 import { usePlugins, useRegisterPlugin, useUnregisterPlugin } from '@/api/plugins'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/lib/toast'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export default function AdminPluginsPage() {
+  useDocumentTitle('Plugins')
   const { data: me, isLoading: meLoading } = useMe()
   const { data: plugins = [], isLoading } = usePlugins()
   const register = useRegisterPlugin()

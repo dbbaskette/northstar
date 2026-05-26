@@ -20,6 +20,8 @@ import ActivityFeed from '@/components/activity/ActivityFeed'
 import ArchivedPanel from '@/components/board/ArchivedPanel'
 import { useBoardWebSocket } from '@/hooks/useWebSocket'
 import { useBoardPrefs } from '@/lib/boardPrefs'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useCard } from '@/api/cards'
 
 export default function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>()
@@ -66,6 +68,17 @@ export default function BoardPage() {
   useEffect(() => {
     if (board?.id && board.name) recordVisit({ id: board.id, name: board.name })
   }, [board?.id, board?.name, recordVisit])
+
+  // Browser tab title. Reflects board name; when a card modal is open
+  // it gets the card title prepended so multi-tab users can spot the
+  // exact card from the OS tab switcher.
+  const { data: activeCard } = useCard(activeCardId)
+  const tabTitle = board?.name
+    ? activeCard?.title
+      ? `${activeCard.title} · ${board.name}`
+      : board.name
+    : 'Loading board'
+  useDocumentTitle(tabTitle)
 
   useHotkey('f', () => hotkeysBus.emit('toggle-filters'))
 

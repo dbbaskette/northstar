@@ -116,6 +116,7 @@ func main() {
 	webhookDispatcher := service.NewWebhookDispatcher(webhookRepo)
 	go webhookDispatcher.Run(context.Background(), 10*time.Second)
 	events := service.NewEvents(activityRepo, notifRepo, watcherRepo, hub, webhookDispatcher, nil)
+	events.SetUserRepo(userRepo)
 	automationEngine := service.NewAutomationEngine(pool, automationRepo, cardRepo, labelRepo)
 	events.SetAutomation(automationEngine)
 	mentions := service.NewMentions(pool)
@@ -227,6 +228,8 @@ func main() {
 				r.Post("/{sessionId}/revoke", securityHandler.RevokeSession)
 			})
 			r.Post("/me/password", securityHandler.ChangePassword)
+			r.Get("/me/notification-prefs", securityHandler.NotifPrefs)
+			r.Patch("/me/notification-prefs", securityHandler.SetNotifPrefs)
 			r.Route("/me/2fa", func(r chi.Router) {
 				r.Get("/", securityHandler.TwoFAStatus)
 				r.Post("/setup", securityHandler.TwoFASetup)

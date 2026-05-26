@@ -5,6 +5,7 @@ import { useMe } from '@/api/users'
 import { useChangePassword } from '@/api/security'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/lib/toast'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // Two modes:
 //   - Forced (when /users/me reports must_change_password): no Cancel
@@ -13,6 +14,7 @@ import { toast } from '@/lib/toast'
 //   - Voluntary (from /security): Cancel returns to /security.
 export default function ChangePasswordPage() {
   const { data: me, isLoading } = useMe()
+  useDocumentTitle(me?.must_change_password ? 'Set password' : 'Change password')
   const change = useChangePassword()
   const navigate = useNavigate()
   const logout = useAuthStore((s) => s.logout)

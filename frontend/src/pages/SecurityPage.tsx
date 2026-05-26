@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShieldCheck, Smartphone, Monitor, RefreshCw, KeyRound } from 'lucide-react'
+import { ShieldCheck, Smartphone, Monitor, RefreshCw, KeyRound, Bell } from 'lucide-react'
 import {
+  useNotifPrefs,
   useRevokeSession,
   useSessions,
+  useSetNotifPrefs,
   useTwoFADisable,
   useTwoFASetup,
   useTwoFAStatus,
   useTwoFAVerify,
 } from '@/api/security'
+import { toast } from '@/lib/toast'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 function shortUA(ua: string): string {
   if (!ua) return 'Unknown device'
@@ -22,6 +26,7 @@ function shortUA(ua: string): string {
 }
 
 export default function SecurityPage() {
+  useDocumentTitle('Security')
   const { data: sessions = [], isLoading } = useSessions()
   const revoke = useRevokeSession()
   const { data: twoFA } = useTwoFAStatus()
@@ -59,6 +64,9 @@ export default function SecurityPage() {
           Manage your active sessions and two-factor authentication.
         </p>
       </div>
+
+      {/* Notifications */}
+      <NotificationPrefs />
 
       {/* Password */}
       <section className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -217,5 +225,96 @@ export default function SecurityPage() {
         </p>
       </section>
     </div>
+  )
+}
+
+const NOTIF_TYPES: { id: string; label: string; help: string }[] = [
+  {
+    id: 'mention',
+    label: 'Mentions',
+    help: 'Someone @-mentions you in a comment or description.',
+  },
+  {
+    id: 'card.assigned',
+    label: 'Card assignments',
+    help: 'You get assigned to a card.',
+  },
+  {
+    id: 'comment.added',
+    label: 'Comments on cards you watch',
+    help: "New comment on a card you're watching.",
+  },
+  {
+    id: 'reminder',
+    label: 'Card reminders',
+    help: 'Reminders you set on cards (e.g. "ping me 1 day before due").',
+  },
+]
+
+function NotificationPrefs() {
+  const { data: prefs = {}, isLoading } = useNotifPrefs()
+  const setPrefs = useSetNotifPrefs()
+
+  // Default: undefined means "on." Explicit false means "off."
+  const isEnabled = (type: string): boolean => prefs[type] !== false
+
+  const toggle = async (type: string) => {
+    const next = { ...prefs }
+    if (next[type] === false) delete next[type]
+    else next[type] = false
+    try {
+      await setPrefs.mutateAsync(next)
+      toast.success('Preference updated')
+    } catch {
+      toast.error('Could not save')
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+        <Bell className="h-4 w-4" />
+        Notifications
+      </h2>
+      <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+        Pick what pings the bell in the header. Off here means we never create the notification,
+        not just hide it.
+      </p>
+      {isLoading ? (
+        <div className="text-xs text-gray-400">Loading…</div>
+      ) : (
+        <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+          {NOTIF_TYPES.map((t) => {
+            const on = isEnabled(t.id)
+            return (
+              <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t.label}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t.help}</div>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={`Toggle ${t.label}`}
+                  onClick={() => toggle(t.id)}
+                  disabled={setPrefs.isPending}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition disabled:opacity-50 ${
+                    on ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition ${
+                      on ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
   )
 }

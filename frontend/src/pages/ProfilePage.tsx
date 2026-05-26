@@ -8,6 +8,7 @@ import {
 } from '@/api/apiTokens'
 import { useAuthStore } from '@/stores/authStore'
 import Avatar from '@/components/ui/Avatar'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 function flatString(v: unknown): string {
   if (v == null) return ''
@@ -19,6 +20,7 @@ function flatString(v: unknown): string {
 }
 
 export default function ProfilePage() {
+  useDocumentTitle('Profile')
   const { data: user, isLoading } = useMe()
   const updateProfile = useUpdateProfile()
   const uploadAvatar = useUploadAvatar()

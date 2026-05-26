@@ -144,6 +144,39 @@ func (h *SecurityHandler) TwoFAVerify(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "enabled"})
 }
 
+// NotifPrefs returns the viewer's per-type opt-out map. Empty map
+// means "everything is on" — the defaults haven't been touched.
+func (h *SecurityHandler) NotifPrefs(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	prefs, err := h.userRepo.GetNotificationPrefs(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"prefs": prefs})
+}
+
+type setNotifPrefsRequest struct {
+	Prefs map[string]bool `json:"prefs"`
+}
+
+func (h *SecurityHandler) SetNotifPrefs(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r.Context())
+	var req setNotifPrefsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if req.Prefs == nil {
+		req.Prefs = map[string]bool{}
+	}
+	if err := h.userRepo.SetNotificationPrefs(r.Context(), userID, req.Prefs); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"prefs": req.Prefs})
+}
+
 type changePasswordRequest struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`

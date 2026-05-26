@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -262,6 +263,57 @@ func (r *UserRepo) IsApproved(ctx context.Context, userID string) (bool, error) 
 		return false, err
 	}
 	return approved != nil, nil
+}
+
+// GetNotificationPrefs returns the user's per-type opt-out map. An
+// absent key (or value true) means "send this type"; explicit false
+// means "skip it." The empty map is the everything-on default.
+func (r *UserRepo) GetNotificationPrefs(ctx context.Context, userID string) (map[string]bool, error) {
+	var raw []byte
+	if err := r.pool.QueryRow(ctx,
+		`SELECT notification_prefs FROM users WHERE id = $1`, userID,
+	).Scan(&raw); err != nil {
+		return nil, err
+	}
+	out := map[string]bool{}
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &out); err != nil {
+			return out, err
+		}
+	}
+	return out, nil
+}
+
+func (r *UserRepo) SetNotificationPrefs(ctx context.Context, userID string, prefs map[string]bool) error {
+	raw, err := json.Marshal(prefs)
+	if err != nil {
+		return err
+	}
+	ct, err := r.pool.Exec(ctx,
+		`UPDATE users SET notification_prefs = $2::jsonb WHERE id = $1`,
+		userID, string(raw),
+	)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// WantsNotification reports whether the user accepts a given type.
+// Default is "yes" — an unset/missing pref means the user hasn't
+// changed anything from the defaults.
+func (r *UserRepo) WantsNotification(ctx context.Context, userID, notifType string) bool {
+	prefs, err := r.GetNotificationPrefs(ctx, userID)
+	if err != nil {
+		return true // fail open — better a stray notification than a silent one
+	}
+	if v, ok := prefs[notifType]; ok {
+		return v
+	}
+	return true
 }
 
 // HardDelete removes the user row entirely. Cascades through every

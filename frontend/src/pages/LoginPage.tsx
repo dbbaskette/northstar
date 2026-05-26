@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Star, Github } from 'lucide-react'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type Mode = 'login' | 'register'
 
@@ -11,6 +12,7 @@ interface SSOProviders {
 }
 
 export default function LoginPage() {
+  useDocumentTitle('Sign in')
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')

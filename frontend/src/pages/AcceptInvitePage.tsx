@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Star, Lock } from 'lucide-react'
 import { useAcceptInvite, useInvitePreview } from '@/api/invites'
 import { useAuthStore } from '@/stores/authStore'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export default function AcceptInvitePage() {
+  useDocumentTitle('Invitation')
   const { token } = useParams<{ token: string }>()
   const { data: preview, isLoading, error } = useInvitePreview(token || null)
   const acceptInvite = useAcceptInvite()

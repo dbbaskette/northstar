@@ -14,6 +14,7 @@ import { useMyWork, type WorkItem, type WorkReason } from '@/api/work'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import CardHoverPreview, { useHoverPreview } from '@/components/ui/CardHoverPreview'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: '#DC2626',
@@ -80,6 +81,7 @@ const REASON_FILTERS: { id: 'all' | WorkReason; label: string; icon: React.React
 ]
 
 export default function MyWorkPage() {
+  useDocumentTitle('My Work')
   const { data: items = [], isLoading } = useMyWork()
   const [filter, setFilter] = useState<'all' | WorkReason>('all')
   const preview = useHoverPreview()

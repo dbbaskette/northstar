@@ -15,10 +15,12 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/lib/toast'
 import Skeleton from '@/components/ui/Skeleton'
 import CreateUserModal from '@/components/admin/CreateUserModal'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 const ROLES = ['admin', 'member', 'viewer'] as const
 
 export default function AdminUsersPage() {
+  useDocumentTitle('Users')
   const { data: me, isLoading: meLoading } = useMe()
   const { data: users = [], isLoading } = useAdminUsers()
   const updateUser = useUpdateAdminUser()

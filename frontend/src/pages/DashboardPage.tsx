@@ -5,12 +5,14 @@ import { useTeams } from '@/api/teams'
 import { useTeamBoards } from '@/api/boards'
 import { useAppStore } from '@/stores/appStore'
 import { useBoardPrefs } from '@/lib/boardPrefs'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import CreateBoardModal from '@/components/board/CreateBoardModal'
 import CreateTeamModal from '@/components/team/CreateTeamModal'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 
 export default function DashboardPage() {
+  useDocumentTitle('Dashboard')
   const { data: teams = [], isLoading: teamsLoading } = useTeams()
   const activeTeamId = useAppStore((s) => s.activeTeamId)
   const { data: boards = [], isLoading: boardsLoading } = useTeamBoards(activeTeamId)

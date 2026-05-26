@@ -3,8 +3,10 @@ import { Database, Lock, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { useDBInfo } from '@/api/dbInfo'
 import { useMe } from '@/api/users'
 import Skeleton from '@/components/ui/Skeleton'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export default function AdminDBInfoPage() {
+  useDocumentTitle('Database')
   const { data: me, isLoading: meLoading } = useMe()
   const { data: info, isLoading, error } = useDBInfo()
 

@@ -74,6 +74,28 @@ export function useChangePassword() {
   })
 }
 
+export type NotifPrefs = Record<string, boolean>
+
+export function useNotifPrefs() {
+  return useQuery({
+    queryKey: ['me', 'notif-prefs'],
+    queryFn: async (): Promise<NotifPrefs> => {
+      const res = await api.get('/me/notification-prefs')
+      return res.data.prefs || {}
+    },
+  })
+}
+
+export function useSetNotifPrefs() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (prefs: NotifPrefs) => {
+      await api.patch('/me/notification-prefs', { prefs })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'notif-prefs'] }),
+  })
+}
+
 export function useTwoFADisable() {
   const qc = useQueryClient()
   return useMutation({
